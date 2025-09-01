@@ -143,26 +143,32 @@ app.post("/chat/group", async (req, res) => {
 
 // ---------------------- OpenAI helper (Responses API)
 async function openaiChat(messages) {
-  // Node v18+는 글로벌 fetch 사용 가능
   const r = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      input: messages.map(m => ({ role: m.role, content: [{ type: "text", text: m.content }] })),
-    }),
+      // 단순 텍스트 입력으로 변환
+      input: messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")
+    })
   });
+
   if (!r.ok) {
     const t = await r.text();
     throw new Error("openai_error " + t);
   }
+
   const data = await r.json();
-  const block = data.output?.[0];
-  const txt = block?.content?.[0]?.text;
-  return txt || JSON.stringify(data);
+  try {
+    const block = data.output?.[0];
+    const txt = block?.content?.[0]?.text;
+    return txt || JSON.stringify(data);
+  } catch {
+    return JSON.stringify(data);
+  }
 }
 
 // ---------------------- 서버 시작
