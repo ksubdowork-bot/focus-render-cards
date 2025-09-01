@@ -1,108 +1,307 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AI 포커스 그룹</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>AI 포커스 그룹 <span id="mode">(DEMO)</span></h1>
-  <label><input type="checkbox" id="liveToggle"> 실제 모드</label>
+  <header class="appbar">
+    <div class="appbar-left">
+      <strong>AI 포커스 그룹</strong>
+      <span id="mode-badge" class="badge">DEMO</span>
+    </div>
+    <div class="appbar-right">
+      <label class="switch">
+        <input id="liveToggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+      <span class="muted">실제 모드</span>
+    </div>
+  </header>
 
-  <section>
-    <h2>1) 페르소나 저장 (최대 5명)</h2>
-    <input id="pname" placeholder="이름">
-    <input id="prole" placeholder="역할/직무">
-    <input id="ptraits" placeholder="성향">
-    <textarea id="pdesc" placeholder="설명"></textarea>
-    <button onclick="savePersona()">페르소나 저장</button>
-  </section>
+  <main class="wrap">
 
-  <section>
-    <h2>저장된 페르소나</h2>
-    <div id="cards"></div>
-  </section>
+    <!-- 1) 페르소나 입력/저장 -->
+    <section class="card block">
+      <div class="section-head">
+        <h2>1) 페르소나 입력/저장</h2>
+        <nav class="inline-tabs">
+          <button id="navSolo" class="tab active" onclick="scrollToEl('#solo')">솔로</button>
+          <button id="navGroup" class="tab" onclick="scrollToEl('#group')">그룹</button>
+          <button id="navHistory" class="tab" onclick="scrollToEl('#history')">히스토리</button>
+          <button class="tab danger" onclick="resetAll()">초기화</button>
+        </nav>
+      </div>
 
-  <section>
-    <h2>2) 솔로 대화</h2>
-    <select id="soloSelect"></select>
-    <input id="soloQ" placeholder="질문">
-    <button onclick="askSolo()">질문하기</button>
-    <pre id="soloA"></pre>
-  </section>
+      <div class="grid-2">
+        <div class="field">
+          <label>이름/페르소나</label>
+          <input id="pname" placeholder="예: 서울 30대 직장인 Alex" />
+        </div>
+        <div class="field">
+          <label>역할/직무</label>
+          <input id="prole" placeholder="예: 광고 AE(모바일 퍼포먼스)" />
+        </div>
+      </div>
 
-  <section>
-    <h2>3) 그룹 대화</h2>
-    <input id="groupQ" placeholder="모더레이터 질문">
-    <button onclick="askGroup()">그룹 대화 시작</button>
-    <pre id="groupA"></pre>
-  </section>
+      <div class="field">
+        <label>핵심 성향(콤마 구분)</label>
+        <input id="ptraits" placeholder="실용주의, 데이터중심, 가성비, SNS활동" />
+      </div>
+
+      <div class="field">
+        <label>상세 설명</label>
+        <textarea id="pdesc" placeholder="일상, 소비 습관, 브랜드 선호, 미디어 사용 등"></textarea>
+      </div>
+
+      <div class="bar">
+        <button class="btn primary" onclick="savePersona()">페르소나 저장</button>
+        <button class="btn ghost" onclick="fillSample()">샘플 불러오기</button>
+        <button class="btn ghost" onclick="loadCards()">목록 새로고침</button>
+      </div>
+
+      <h3 class="subhead">저장된 페르소나</h3>
+      <div id="personaCards" class="cards"></div>
+      <p class="hint">※ 카드 제목을 클릭하면 아래 솔로/그룹에 자동 적용됩니다.</p>
+    </section>
+
+    <!-- 2) 솔로 대화 -->
+    <section id="solo" class="card block">
+      <h2>2) 솔로 대화(이력 유지)</h2>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>페르소나 ID</label>
+          <input id="soloPersonaId" placeholder="목록에서 클릭하면 자동입력" />
+        </div>
+        <div class="field">
+          <label>세션 ID(비워두면 새로 생성)</label>
+          <input id="soloSessionId" placeholder="자동생성됨" />
+        </div>
+        <div class="field">
+          <label>최근 컨텍스트 최대턴(기본 20)</label>
+          <select id="soloMaxTurns">
+            <option>10</option><option selected>20</option><option>30</option>
+            <option>40</option><option>50</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>질문</label>
+        <input id="soloQ" placeholder="예: 어떤 카피나 크리에이티브가 설득력 있을까?" />
+      </div>
+
+      <div class="bar">
+        <button class="btn primary" onclick="askSolo()">질문하기</button>
+        <button class="btn secondary" onclick="loadCards()">세션 이력 불러오기</button>
+      </div>
+
+      <pre id="soloA" class="debug" style="display:none"></pre>
+    </section>
+
+    <!-- 3) 그룹 대화 -->
+    <section id="group" class="card block">
+      <h2>3) 그룹 대화(최대 5명)</h2>
+      <p class="hint">아래 목록에서 페르소나를 최대 5명까지 체크하세요. 순서대로 발언합니다.</p>
+
+      <div id="groupChips" class="chips"></div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>토픽 / 과제</label>
+          <input id="groupTopic" placeholder="예: Z세대 타깃 신규 런칭 캠페인 전략" />
+        </div>
+        <div class="field">
+          <label>라운드 수(기본 2)</label>
+          <select id="rounds">
+            <option>1</option><option selected>2</option><option>3</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>최근 컨텍스트 최대턴(기본 20)</label>
+          <select id="groupMaxTurns">
+            <option>10</option><option selected>20</option><option>30</option>
+            <option>40</option><option>50</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bar">
+        <button class="btn success" onclick="askGroup()">그룹 대화 시작</button>
+        <button class="btn secondary" onclick="loadCards()">세션 이력 불러오기</button>
+      </div>
+
+      <pre id="groupA" class="debug" style="display:none"></pre>
+    </section>
+
+    <!-- 4) 세션 히스토리 불러오기 (옵션) -->
+    <section id="history" class="card block">
+      <h2>4) 세션 히스토리 불러오기</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>세션 ID</label>
+          <input id="histSessionId" />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn secondary" onclick="notImplemented()">불러오기</button>
+        </div>
+      </div>
+      <p class="hint">※ 서버에 별도 저장소가 없으므로 이 섹션은 예시입니다.</p>
+    </section>
+  </main>
 
   <script>
-  let forceDemo = true;
-  document.getElementById("liveToggle").addEventListener("change", e=>{
-    forceDemo = !e.target.checked;
-    document.getElementById("mode").innerText = forceDemo ? "(DEMO)" : "(LIVE)";
-  });
-
-  async function savePersona(){
-    const id = Date.now().toString();
-    const p = {
-      id, name: document.getElementById("pname").value,
-      role: document.getElementById("prole").value,
-      traits: document.getElementById("ptraits").value,
-      description: document.getElementById("pdesc").value
-    };
-    await fetch("/api/persona",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
-    loadCards();
-  }
-
-  async function loadCards(){
-    const res = await fetch("/api/personas-list");
-    const data = await res.json();
-    const cards = document.getElementById("cards");
-    cards.innerHTML = "";
-    const select = document.getElementById("soloSelect");
-    select.innerHTML = "";
-    (data.items||[]).forEach(p=>{
-      const div=document.createElement("div");
-      div.className="card";
-      div.innerHTML=`<b>${p.name}</b> (${p.role}) <button onclick="delPersona('${p.id}')">삭제</button>`;
-      div.onclick=()=>{document.getElementById("soloSelect").value=p.id};
-      cards.appendChild(div);
-      const opt=document.createElement("option");
-      opt.value=p.id; opt.textContent=p.name;
-      select.appendChild(opt);
+    // --- 상태
+    let forceDemo = true; // DEMO 기본
+    document.getElementById("liveToggle").addEventListener("change", (e) => {
+      forceDemo = !e.target.checked;
+      document.getElementById("mode-badge").textContent = forceDemo ? "DEMO" : "LIVE";
     });
-  }
 
-  async function delPersona(id){
-    await fetch("/api/persona/"+id,{method:"DELETE"});
+    // --- 유틸
+    const $ = (sel) => document.querySelector(sel);
+    const el = (tag, cls) => { const x = document.createElement(tag); if(cls) x.className = cls; return x; };
+    function scrollToEl(target){ document.querySelector(target).scrollIntoView({behavior:"smooth"}); }
+    function resetAll(){ localStorage.clear(); loadCards(); $("#soloA").style.display="none"; $("#groupA").style.display="none"; }
+
+    function fillSample(){
+      $("#pname").value="서울 30대 직장인 Alex";
+      $("#prole").value="광고 AE(모바일 퍼포먼스)";
+      $("#ptraits").value="실용주의, 데이터중심, 가성비, SNS활동";
+      $("#pdesc").value="출퇴근, 모바일 정보소비, 단기성과 선호, 브랜드 충성도 낮음";
+    }
+
+    // --- API
+    async function api(path, opt){
+      const r = await fetch(path, opt);
+      const j = await r.json();
+      return j;
+    }
+
+    // 페르소나 저장
+    async function savePersona(){
+      const id = crypto.randomUUID();
+      const body = {
+        id,
+        name: $("#pname").value.trim(),
+        role: $("#prole").value.trim(),
+        traits: $("#ptraits").value.trim(),
+        description: $("#pdesc").value.trim()
+      };
+      if(!body.name){ alert("이름을 입력하세요"); return; }
+      await api("/api/persona", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+      await loadCards();
+      $("#pname").value = $("#prole").value = $("#ptraits").value = $("#pdesc").value = "";
+    }
+
+    // 카드/칩 목록 렌더
+    async function loadCards(){
+      const data = await api("/api/personas-list");
+      const list = (data.items||[]).filter(Boolean);
+
+      // 카드
+      const holder = $("#personaCards");
+      holder.innerHTML = "";
+      list.forEach(p=>{
+        const c = el("div","persona-card");
+        const h = el("div","card-head");
+        const title = el("button","card-title link");
+        title.textContent = `${p.name || "이름없음"}`;
+        title.onclick = ()=>{
+          $("#soloPersonaId").value = p.id;
+          document.querySelectorAll(`.chip[data-id="${p.id}"]`).forEach(x=>x.classList.add("active"));
+          limitChips();
+        };
+        const del = el("button","pill danger");
+        del.textContent="삭제";
+        del.onclick = async ()=>{
+          await api("/api/persona/"+p.id, { method:"DELETE" });
+          loadCards();
+        };
+        h.append(title,del);
+
+        const meta = el("p","muted small");
+        meta.innerHTML = `ID: ${p.id}<br/>${p.role || ""}`;
+
+        const desc = el("p","muted small");
+        desc.textContent = `${p.traits || ""}`;
+
+        c.append(h, meta, desc);
+        holder.append(c);
+      });
+
+      // 그룹 칩
+      const chips = $("#groupChips");
+      chips.innerHTML = "";
+      list.forEach(p=>{
+        const chip = el("button","chip");
+        chip.dataset.id = p.id;
+        chip.title = p.description || "";
+        chip.innerHTML = `<span class="chip-name">${p.name || "이름없음"}</span><span class="chip-role">${p.role || ""}</span>`;
+        chip.onclick = ()=>{ chip.classList.toggle("active"); limitChips(); };
+        chips.append(chip);
+      });
+    }
+
+    function limitChips(){
+      const actives = Array.from(document.querySelectorAll(".chip.active"));
+      if (actives.length > 5){
+        actives[actives.length - 1].classList.remove("active");
+        alert("최대 5명까지 선택할 수 있습니다.");
+      }
+    }
+
+    // 솔로 질의
+    async function askSolo(){
+      const id = $("#soloPersonaId").value.trim();
+      if(!id){ alert("페르소나를 선택하세요"); return; }
+      const list = await api("/api/personas-list");
+      const persona = (list.items||[]).find(p=>p.id===id);
+      if(!persona){ alert("해당 페르소나를 찾을 수 없습니다."); return; }
+
+      const payload = {
+        persona,
+        question: $("#soloQ").value || "질문이 비었습니다.",
+        forceDemo
+      };
+      const r = await api("/api/chat-solo", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      $("#soloA").style.display="block";
+      $("#soloA").textContent = r?.answer?.content || "응답 없음";
+    }
+
+    // 그룹 질의
+    async function askGroup(){
+      const ids = Array.from(document.querySelectorAll(".chip.active")).map(x=>x.dataset.id);
+      if(ids.length < 2){ alert("최소 2명 이상 선택하세요."); return; }
+
+      const list = await api("/api/personas-list");
+      const personas = (list.items||[]).filter(p=>ids.includes(p.id)).slice(0,5);
+      const payload = {
+        personas,
+        question: $("#groupTopic").value || "주제가 비었습니다.",
+        rounds: Number($("#rounds").value || 2),
+        forceDemo
+      };
+      const r = await api("/api/chat-group", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const lines = (r.transcript||[]).map(t=>`${t.speaker}: ${t.text}`).join("\n");
+      $("#groupA").style.display="block";
+      $("#groupA").textContent = `${lines}\n\n— 요약 —\n${r.summary||""}`;
+    }
+
+    function notImplemented(){ alert("예시 섹션입니다. 필요 시 서버 저장 로직을 추가하세요."); }
+
+    // 초기 로드
     loadCards();
-  }
-
-  async function askSolo(){
-    const id=document.getElementById("soloSelect").value;
-    const q=document.getElementById("soloQ").value;
-    const res=await fetch("/api/personas-list");
-    const list=await res.json();
-    const persona=list.items.find(p=>p.id===id);
-    const r=await fetch("/api/chat-solo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({persona,question:q,forceDemo})});
-    const j=await r.json();
-    document.getElementById("soloA").innerText=j.answer.content;
-  }
-
-  async function askGroup(){
-    const res=await fetch("/api/personas-list");
-    const list=await res.json();
-    const q=document.getElementById("groupQ").value;
-    const r=await fetch("/api/chat-group",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({personas:list.items,question:q,rounds:2,forceDemo})});
-    const j=await r.json();
-    document.getElementById("groupA").innerText=j.transcript.map(t=>t.speaker+": "+t.text).join("\\n")+"\\n---\\n요약: "+j.summary;
-  }
-
-  loadCards();
   </script>
 </body>
 </html>
