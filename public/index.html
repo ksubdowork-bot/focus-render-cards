@@ -6,376 +6,477 @@
   <title>AI 포커스 그룹</title>
   <style>
     :root{
-      --bg:#f7f8fb; --card:#fff; --txt:#212529; --muted:#667085;
-      --primary:#5b6cff; --primary-600:#4c5fe6; --danger:#ff6b6b; --green:#3cc78d;
-      --ring:rgba(91,108,255,.25);
+      --brand:#5b6cff;        /* 포인트 컬러 */
+      --brand-ghost:#eef0ff;
+      --ink:#121418;
+      --muted:#6b7280;
+      --card:#ffffff;
+      --bg:#f7f8fb;
+      --ok:#10b981;
+      --danger:#ef4444;
+      --ans-bg:#1f2430;       /* 답변 박스 배경 (짙은 회색) */
+      --ans-fg:#ffffff;       /* 답변 텍스트 흰색 */
+      --radius:14px;
+      --radius-sm:10px;
+      --shadow:0 10px 30px rgba(41,53,108,.10);
+      --shadow-sm:0 6px 18px rgba(41,53,108,.08);
+      --chip:#f2f4f7;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
-    .wrap{max-width:1080px;margin:28px auto;padding:0 16px}
-    h1{font-size:22px;margin:0 0 16px}
-    .badge{font-size:11px;padding:2px 8px;border-radius:999px;background:#fff0cc;color:#b26f00;border:1px solid #ffe3a1;margin-left:8px}
-    .hint{font-size:12px;color:var(--muted)}
-    .card{background:var(--card);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.02);padding:16px;margin:14px 0;border:1px solid #eef1f4}
-    .card-row{display:grid;gap:12px}
-    @media(min-width:700px){ .card-row{grid-template-columns:repeat(3,1fr)} }
-    .persona-card{border:1px solid #eef1f4;border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:6px;position:relative;cursor:pointer;transition:transform .05s ease,border-color .15s ease,box-shadow .15s ease}
-    .persona-card:hover{border-color:#dfe6ee;box-shadow:0 0 0 3px var(--ring)}
-    .persona-card.active{outline:2px solid var(--primary);outline-offset:2px}
-    .persona-name{font-weight:700}
-    .persona-role,.persona-traits,.persona-desc{font-size:12px;color:var(--muted)}
-    .persona-actions{display:flex;gap:6px;position:absolute;right:10px;top:8px}
-    .tag{font-size:11px;padding:2px 6px;border-radius:999px;background:#eef2ff;color:#3344dd}
-    .row{display:grid;gap:10px}
-    @media(min-width:720px){ .row-2{grid-template-columns:1fr 1fr} }
-    .input,select,textarea{width:100%;padding:11px 12px;border:1px solid #e6e9ef;border-radius:11px;background:#fff;font-size:14px;outline:none}
-    .input:focus, select:focus, textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--ring)}
-    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;background:#eef1f6;color:#2b2f36}
-    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-600)}
-    .btn-danger{background:#ffe5e5;color:#b32525}.btn-ghost{background:transparent;color:var(--muted)}
-    .btn-green{background:var(--green);color:#fff}
-    .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px}
-    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .section-title{font-weight:700;margin:4px 0 10px}
-    .answer{background:#1f2430;color:#fff;white-space:pre-wrap;padding:14px;border-radius:12px;font-size:14px;border:1px solid #2b3140}
-    .visually-hidden{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Malgun Gothic,sans-serif;
+    }
+    .wrap{max-width:980px; margin:32px auto; padding:0 16px}
+    h1{font-size:20px; margin:0 0 16px; display:flex; gap:10px; align-items:center}
+    .badge{font-size:12px; padding:4px 8px; border-radius:999px; background:#e9eefb; color:#4252d9}
+    .mode-toggle{margin-left:auto; display:flex; gap:8px; align-items:center}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#fff; padding:4px; border-radius:999px; box-shadow:var(--shadow-sm)
+    }
+    .pill input{display:none}
+    .pill label{
+      padding:6px 12px; border-radius:999px; cursor:pointer; color:var(--muted)
+    }
+    .pill input:checked + label{ background:var(--brand); color:#fff }
+
+    .section{
+      background:var(--card); border-radius:var(--radius);
+      padding:18px; box-shadow:var(--shadow); margin:14px 0;
+    }
+    .sec-title{font-weight:700; margin:0 0 12px; font-size:16px}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .full{grid-column:1 / -1}
+    input,textarea,select{
+      width:100%; padding:12px 14px; border:1px solid #e5e7eb; border-radius:10px;
+      background:#fff; outline:none; transition:.15s; font:inherit;
+    }
+    input:focus,textarea:focus,select:focus{border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-ghost)}
+    textarea{min-height:96px; resize:vertical}
+    .hint{font-size:12px; color:var(--muted); margin-top:8px}
+
+    .btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+    .btn{
+      border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+      box-shadow:var(--shadow-sm); background:#f3f4f6; color:#111827;
+    }
+    .btn.primary{ background:var(--brand); color:#fff }
+    .btn.ghost{ background:#fff }
+    .btn.success{ background:var(--ok); color:#fff }
+    .btn.danger{ background:#fff0f0; color:#b91c1c }
+
+    .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin-top:10px}
+    .card{
+      background:#fff; border:1px solid #eef0f4; border-radius:12px; padding:12px; display:flex; gap:10px; align-items:flex-start;
+      box-shadow:var(--shadow-sm); position:relative;
+    }
+    .card .name{font-weight:700}
+    .card .meta{font-size:12px; color:var(--muted); margin-top:2px}
+    .chip{display:inline-block; padding:4px 8px; border-radius:999px; background:var(--chip); font-size:12px; color:#555}
+
+    .card .kebab{ position:absolute; top:8px; right:8px; display:flex; gap:6px }
+    .tag { font-size:11px; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#4f46e5 }
+
+    .answer{
+      background:var(--ans-bg); color:var(--ans-fg);
+      border-radius:12px; padding:14px; white-space:pre-wrap; box-shadow:var(--shadow-sm)
+    }
+    .list-inline{display:flex; gap:8px; flex-wrap:wrap}
+    .persona-pill{
+      padding:10px 12px; border:1px dashed #e5e7eb; border-radius:12px; min-height:64px; background:#fff
+    }
+
+    @media (max-width:720px){
+      .row{grid-template-columns:1fr}
+      .mode-toggle{width:100%; justify-content:flex-end}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>AI 포커스 그룹 <span id="demoBadge" class="badge" style="display:none">DEMO(로컬 저장 모드)</span></h1>
+    <h1>
+      AI 포커스 그룹
+      <span id="modeBadge" class="badge">DEMO</span>
+      <div class="mode-toggle">
+        <div class="pill">
+          <input type="radio" name="mode" id="modeDemo" value="demo" checked>
+          <label for="modeDemo">데모</label>
+          <input type="radio" name="mode" id="modeLive" value="live">
+          <label for="modeLive">실제</label>
+        </div>
+      </div>
+    </h1>
 
     <!-- 1) 페르소나 입력/저장 -->
-    <div class="card">
-      <div class="toolbar" style="justify-content:space-between;margin-bottom:8px">
-        <div class="section-title">1) 페르소나 입력/저장</div>
-        <div class="toolbar">
-          <button class="btn btn-ghost btn-sm" id="goSolo">솔로</button>
-          <button class="btn btn-ghost btn-sm" id="goGroup">그룹</button>
-          <button class="btn btn-ghost btn-sm" id="goReset">초기화</button>
+    <section class="section" id="secSave">
+      <div class="sec-title">1) 페르소나 입력/저장 (최대 5명)</div>
+      <div class="row">
+        <div>
+          <label>이름/별칭</label>
+          <input id="pName" placeholder="예: 서울 30대 직장인 Alex" />
+        </div>
+        <div>
+          <label>역할/직무</label>
+          <input id="pRole" placeholder="예: 광고 AE(모바일 퍼포먼스)" />
+        </div>
+        <div class="full">
+          <label>핵심 성향(콤마 구분)</label>
+          <input id="pTraits" placeholder="실용주의, 데이터중심, 가성비, SNS활동" />
+        </div>
+        <div class="full">
+          <label>상세 설명</label>
+          <textarea id="pBio" placeholder="일상, 소비 습관, 브랜드 선호, 미디어 사용 등"></textarea>
         </div>
       </div>
 
-      <div class="row row-2">
-        <input class="input" id="pName" placeholder="예: 서울 30대 직장인 Alex" />
-        <input class="input" id="pRole" placeholder="예: 광고 AE(모바일 퍼포먼스)" />
-      </div>
-      <div style="height:8px"></div>
-      <input class="input" id="pTraits" placeholder="핵심 성향(콤마 구분)  예: 실용주의, 데이터중심, 가성비, SNS활동" />
-      <div style="height:8px"></div>
-      <textarea class="input" id="pDesc" rows="3" placeholder="상세 설명  예: 일상, 소비 습관, 브랜드 선호, 미디어 사용 등"></textarea>
-
-      <div style="height:12px"></div>
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnSave">페르소나 저장</button>
-        <button class="btn" id="btnReload">목록 새로고침</button>
+      <div class="btns">
+        <button class="btn primary" id="btnSavePersona">페르소나 저장</button>
+        <button class="btn ghost" id="btnLoadSamples">샘플 불러오기</button>
+        <button class="btn ghost" id="btnRefreshList">목록 새로고침</button>
       </div>
 
-      <div style="height:16px"></div>
-      <div class="section-title">저장된 페르소나</div>
-      <div id="personaList" class="card-row"></div>
-      <div class="hint">* 카드 클릭 시 아래 솔로/그룹 입력란에 자동 적용됩니다. (ID는 화면에 표시되지 않습니다)</div>
-    </div>
+      <div class="hint">* 저장 후 아래 카드에서 “클릭”하면 해당 슬롯/그룹에 선택이 자동 적용됩니다. (ID는 사용자 화면에 표시하지 않습니다)</div>
 
-    <!-- 2) 솔로 대화(이력 유지) -->
-    <div class="card" id="soloCard">
-      <div class="section-title">2) 솔로 대화(이력 유지)</div>
+      <div class="cards" id="personaList"></div>
+    </section>
 
-      <!-- 이름으로만 보이는 셀렉트(내부 value는 id) -->
-      <select class="input" id="soloPersonaSelect" aria-label="페르소나 선택"></select>
+    <!-- 2) 솔로 대화 -->
+    <section class="section" id="secSolo">
+      <div class="sec-title">2) 솔로 대화(이력 유지)</div>
+      <div class="row">
+        <div class="full">
+          <label>페르소나</label>
+          <select id="soloPersonaSelect"></select>
+        </div>
+        <div>
+          <label>최근 컨텍스트 최대값(기본 20)</label>
+          <select id="soloLimit">
+            <option>10</option><option selected>20</option><option>30</option><option>50</option>
+          </select>
+        </div>
+        <div class="full">
+          <label>질문</label>
+          <input id="soloQuestion" placeholder="예: 어떤 카피가 크리에이티브가 설득력 있을까?" />
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn primary" id="btnAskSolo">질문하기</button>
+      </div>
+      <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;"></div>
+    </section>
 
-      <div style="height:8px"></div>
-      <div class="row row-2">
-        <input id="soloSessionId" class="visually-hidden" readonly />
-        <div class="visually-hidden"><button id="btnSoloLoad" class="btn">세션 이력 불러오기</button></div>
-        <label class="visually-hidden" for="soloContextLimit">최근 컨텍스트 제한</label>
-        <select class="input" id="soloContextLimit">
-          <option value="10">10</option>
-          <option value="20" selected>20</option>
-          <option value="30">30</option>
-        </select>
+    <!-- 3) 그룹 대화 -->
+    <section class="section" id="secGroup">
+      <div class="sec-title">3) 그룹 대화(최대 5명)</div>
+      <div class="hint">아래 목록에서 페르소나를 최대 5명까지 선택하세요. 순서대로 발언합니다.</div>
+
+      <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;">
+        <!-- 선택된 페르소나 칩이 들어감 -->
       </div>
 
-      <div style="height:8px"></div>
-      <input class="input" id="soloQuestion" placeholder="예: 어떤 캠페인 크리에이티브가 설득력 있을까?" />
-      <div style="height:10px"></div>
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnAsk">질문하기</button>
+      <div class="row">
+        <div class="full">
+          <label>토픽 / 과제</label>
+          <input id="groupTopic" placeholder="예: Z세대 타깃 신규 런칭 캠페인 전략" />
+        </div>
+        <div>
+          <label>라운드 수(기본 2)</label>
+          <select id="groupRounds"><option>1</option><option selected>2</option><option>3</option></select>
+        </div>
+        <div>
+          <label>최근 컨텍스트 최대값(기본 20)</label>
+          <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
+        </div>
       </div>
 
-      <div style="height:12px"></div>
-      <div id="soloAnswer" class="answer"></div>
-    </div>
-
-    <!-- 3) 그룹 대화(최대 5명) -->
-    <div class="card">
-      <div class="section-title">3) 그룹 대화(최대 5명)</div>
-      <div class="hint">아래 목록에서 페르소나를 최대 5명까지 체크하세요. 순서대로 발언합니다.</div>
-      <div style="height:8px"></div>
-      <div id="groupPick" class="card-row"></div>
-
-      <div style="height:8px"></div>
-      <input class="input" id="groupTopic" placeholder="토픽/과제  예: Z세대 타깃 신규 런칭 캠페인 전략" />
-      <div style="height:8px"></div>
-      <div class="row row-2">
-        <select class="input" id="groupRounds">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-        <select class="input" id="groupContextLimit">
-          <option value="10">10</option>
-          <option value="20" selected>20</option>
-          <option value="30">30</option>
-        </select>
+      <div class="btns">
+        <button class="btn success" id="btnStartGroup">그룹 대화 시작</button>
       </div>
-
-      <div style="height:10px"></div>
-      <div class="toolbar">
-        <button class="btn btn-green" id="btnGroupStart">그룹 대화 시작</button>
-      </div>
-
-      <div style="height:12px"></div>
-      <div id="groupAnswer" class="answer"></div>
-    </div>
-
-    <!-- 4) 세션 히스토리 UI는 숨김 -->
-    <div class="visually-hidden" id="historySection">
-      <div class="card">
-        <div class="section-title">4) 세션 히스토리 불러오기</div>
-        <input class="input" id="historySessionId" />
-        <button class="btn" id="btnHistoryLoad">불러오기</button>
-        <div id="historyOut" class="answer"></div>
-      </div>
-    </div>
+      <div id="groupAnswer" class="answer" style="margin-top:12px; display:none;"></div>
+    </section>
   </div>
 
   <script>
-    // ---------------- 상태/유틸 ----------------
-    const state = {
-      personas: [],
-      selectedPersonaId: '',
-      picks: new Set(),
-      demo: false        // 서버 API 실패 시 자동 true (localStorage 사용)
-    };
-    const $ = s => document.querySelector(s);
+    // -------- 상태 & 유틸
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const modeBadge = $("#modeBadge");
+    const modeDemo = $("#modeDemo");
+    const modeLive = $("#modeLive");
 
-    function setDemoMode(on){
-      state.demo = !!on;
-      $('#demoBadge').style.display = on ? 'inline-block' : 'none';
+    const LSK = "personas.v1"; // localStorage key
+
+    function toast(msg){
+      alert(msg);
     }
 
-    // --------------- API 래퍼 (다중 경로 + 폴백) ---------------
-    async function apiTry(paths, opts={}){
-      let lastErr;
-      for(const path of paths){
-        try{
-          const r = await fetch(path, {
-            headers: {'Content-Type':'application/json'},
-            ...opts
-          });
-          if(r.ok) return await r.json();
-          lastErr = new Error(`HTTP ${r.status} @ ${path}`);
-        }catch(e){ lastErr = e; }
-      }
-      throw lastErr;
+    function loadPersonas(){
+      try{
+        const arr = JSON.parse(localStorage.getItem(LSK) || "[]");
+        return Array.isArray(arr) ? arr : [];
+      }catch(_){return [];}
+    }
+    function savePersonas(arr){
+      localStorage.setItem(LSK, JSON.stringify(arr.slice(0,5)));
+    }
+    function addPersona(p){
+      const arr = loadPersonas();
+      if(arr.length >= 5){ toast("최대 5명까지 저장할 수 있어요."); return false; }
+      arr.unshift(p);
+      savePersonas(arr);
+      return true;
+    }
+    function updatePersona(idx, p){
+      const arr = loadPersonas();
+      if(arr[idx]){ arr[idx] = p; savePersonas(arr); }
+    }
+    function deletePersona(idx){
+      const arr = loadPersonas();
+      arr.splice(idx,1);
+      savePersonas(arr);
     }
 
-    const API = {
-      // 목록: /api/persona/list -> /api/personas -> (로컬)
-      async list(){
-        try{
-          const res = await apiTry(['/api/persona/list','/api/personas']);
-          setDemoMode(false);
-          return res;
-        }catch(e){
-          console.warn('list() failed, fallback to localStorage:', e);
-          setDemoMode(true);
-          const items = JSON.parse(localStorage.getItem('personas')||'[]');
-          return { ok:true, items };
-        }
-      },
-      // 저장: /api/persona/save -> /api/personas
-      async save(body){
-        try{
-          const res = await apiTry(
-            ['/api/persona/save','/api/personas'],
-            { method:'POST', body: JSON.stringify(body) }
-          );
-          setDemoMode(false);
-          return res;
-        }catch(e){
-          // localStorage 저장 (id 없으면 생성)
-          setDemoMode(true);
-          const items = JSON.parse(localStorage.getItem('personas')||'[]');
-          const id = crypto.randomUUID();
-          items.push({ id, ...body });
-          localStorage.setItem('personas', JSON.stringify(items));
-          return { ok:true, id };
-        }
-      },
-      // 삭제: /api/persona/:id -> /api/personas/:id
-      async remove(id){
-        try{
-          const res = await apiTry(
-            [`/api/persona/${encodeURIComponent(id)}`, `/api/personas/${encodeURIComponent(id)}`],
-            { method:'DELETE' }
-          );
-          setDemoMode(false);
-          return res;
-        }catch(e){
-          setDemoMode(true);
-          const items = JSON.parse(localStorage.getItem('personas')||'[]').filter(x=>x.id!==id);
-          localStorage.setItem('personas', JSON.stringify(items));
-          return { ok:true };
-        }
-      },
-      // 솔로: /api/chat/solo -> /api/solo
-      async solo(body){
-        try{
-          const res = await apiTry(
-            ['/api/chat/solo','/api/solo'],
-            { method:'POST', body: JSON.stringify(body) }
-          );
-          setDemoMode(false);
-          return res;
-        }catch(e){
-          setDemoMode(true);
-          const p = state.personas.find(x=>x.id===body.personaId);
-          const name = p?.name || '페르소나';
-          return { ok:true, output:`[DEMO] ${name}의 시점으로 답합니다.\n\nQ. ${body.question}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 사용됩니다.` };
-        }
-      },
-      // 그룹: /api/chat/group -> /api/group
-      async group(body){
-        try{
-          const res = await apiTry(
-            ['/api/chat/group','/api/group'],
-            { method:'POST', body: JSON.stringify(body) }
-          );
-          setDemoMode(false);
-          return res;
-        }catch(e){
-          setDemoMode(true);
-          const names = body.personas.map(id=>state.personas.find(p=>p.id===id)?.name||'이름없음').join(', ');
-          return { ok:true, output:`[DEMO] 그룹(${names}) 라운드 ${body.rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 사용됩니다.` };
-        }
-      }
-    };
-
-    // ---------------- 렌더링 ----------------
-    function renderPersonaCards(){
-      const list = $('#personaList'); list.innerHTML='';
-      const pick = $('#groupPick'); pick.innerHTML='';
-
-      state.personas.forEach(p=>{
-        // 상단 카드
-        const card = document.createElement('div');
-        card.className = 'persona-card'; card.dataset.id = p.id;
-        const name = document.createElement('div'); name.className='persona-name'; name.textContent=p.name||'(이름없음)';
-        const role = document.createElement('div'); role.className='persona-role'; role.textContent=p.role||'';
-        const traits = document.createElement('div'); traits.className='persona-traits'; traits.textContent=(p.traits||'').replaceAll(',',', ');
-        const desc = document.createElement('div'); desc.className='persona-desc'; desc.textContent=p.desc||'';
-        const act = document.createElement('div'); act.className='persona-actions';
-        const edit = document.createElement('button'); edit.className='btn btn-sm'; edit.textContent='편집';
-        edit.onclick = (e)=>{ e.stopPropagation(); openEdit(p); };
-        const del = document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='삭제';
-        del.onclick = async (e)=>{ e.stopPropagation(); await removePersona(p.id); };
-        act.append(edit,del);
-        card.append(act,name,role,traits,desc);
-        card.onclick = ()=>{ state.selectedPersonaId = p.id; $('#soloPersonaSelect').value=p.id; };
-        list.append(card);
-
-        // 그룹 선택 카드
-        const g = document.createElement('div');
-        g.className='persona-card'; g.dataset.id=p.id;
-        const gn = document.createElement('div'); gn.className='persona-name'; gn.textContent=p.name||'(이름없음)';
-        const gr = document.createElement('div'); gr.className='persona-role'; gr.textContent=p.role||'';
-        const gt = document.createElement('div'); gt.className='persona-traits'; gt.textContent=(p.traits||'').replaceAll(',',', ');
-        g.append(gn,gr,gt);
-        g.onclick = ()=>{
-          if(state.picks.has(p.id)){ state.picks.delete(p.id); g.classList.remove('active'); }
-          else{
-            if(state.picks.size>=5) return alert('최대 5명까지 선택');
-            state.picks.add(p.id); g.classList.add('active');
+    function renderPersonaList(){
+      const list = loadPersonas();
+      const box = $("#personaList");
+      box.innerHTML = "";
+      list.forEach((p, idx) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.innerHTML = `
+          <div style="flex:1">
+            <div class="name">${esc(p.name || "이름없음")}</div>
+            <div class="meta">${esc(p.role || "")}</div>
+            <div class="meta" style="margin-top:6px">${esc(p.traits || "")}</div>
+          </div>
+          <div class="kebab">
+            <button class="btn ghost" data-edit>편집</button>
+            <button class="btn danger" data-del>삭제</button>
+            <span class="tag">클릭으로 선택</span>
+          </div>
+        `;
+        // 클릭하면 솔로/그룹 선택 적용
+        el.addEventListener("click", (e)=>{
+          if(e.target.matches("[data-del]")) return; // 삭제버튼은 별도 처리
+          if(e.target.matches("[data-edit]")) return; // 편집버튼은 별도 처리
+          applyPersonaToSelectors(p);
+        });
+        // 삭제
+        el.querySelector("[data-del]").addEventListener("click",(e)=>{
+          e.stopPropagation();
+          if(confirm("이 페르소나를 삭제할까요?")){
+            deletePersona(idx);
+            renderPersonaList();
+            refreshSelectors();
           }
-        };
-        pick.append(g);
+        });
+        // 편집
+        el.querySelector("[data-edit]").addEventListener("click",(e)=>{
+          e.stopPropagation();
+          const np = promptEditPersona(p);
+          if(np){
+            updatePersona(idx, np);
+            renderPersonaList();
+            refreshSelectors();
+          }
+        });
+        box.appendChild(el);
       });
+      refreshSelectors();
+      renderGroupPickArea();
+    }
 
-      // 셀렉트 채우기
-      const sel = $('#soloPersonaSelect'); sel.innerHTML='';
-      state.personas.forEach(p=>{
-        const o=document.createElement('option'); o.value=p.id; o.textContent=p.name||'(이름없음)'; sel.append(o);
+    function promptEditPersona(old){
+      const name = prompt("이름/별칭", old.name || "");
+      if(name===null) return null;
+      const role = prompt("역할/직무", old.role || "");
+      if(role===null) return null;
+      const traits = prompt("핵심 성향(콤마 구분)", old.traits || "");
+      if(traits===null) return null;
+      const bio = prompt("상세 설명", old.bio || "");
+      if(bio===null) return null;
+      return {name:name.trim(), role:role.trim(), traits:traits.trim(), bio:bio.trim()};
+    }
+
+    function esc(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    // 솔로/그룹 선택박스 채우기
+    function refreshSelectors(){
+      const list = loadPersonas();
+      const sel = $("#soloPersonaSelect");
+      const v = sel.value;
+      sel.innerHTML = list.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
+      if(list.length===0) sel.innerHTML = `<option value="" disabled selected>저장된 페르소나 없음</option>`;
+      else if(v && list.some(p=>p.name===v)) sel.value = v;
+      renderGroupPickArea();
+    }
+
+    function applyPersonaToSelectors(p){
+      // 솔로 선택 박스
+      const sel = $("#soloPersonaSelect");
+      sel.value = p.name;
+      // 그룹 선택칩에 토글추가/제거
+      toggleGroupPerson(p.name);
+    }
+
+    // 그룹 선택 UI
+    function renderGroupPickArea(){
+      const box = $("#groupSelected");
+      const list = loadPersonas();
+      box.innerHTML = "";
+      list.forEach(p=>{
+        const chip = document.createElement("div");
+        chip.className = "persona-pill";
+        chip.dataset.name = p.name;
+        chip.innerHTML = `<div style="font-weight:700">${esc(p.name)}</div><div class="meta">${esc(p.role)}</div><div class="meta">${esc(p.traits)}</div>`;
+        chip.addEventListener("click", ()=> toggleGroupPerson(p.name));
+        box.appendChild(chip);
       });
-      if(state.selectedPersonaId) sel.value=state.selectedPersonaId;
-      else if(state.personas[0]){ sel.value=state.personas[0].id; state.selectedPersonaId=sel.value; }
+      updateGroupSelectedStyles();
+    }
+    function getGroupSelected(){
+      const set = JSON.parse(sessionStorage.getItem("group.selected")||"[]");
+      return Array.isArray(set)? set : [];
+    }
+    function setGroupSelected(arr){
+      sessionStorage.setItem("group.selected", JSON.stringify(arr.slice(0,5)));
+      updateGroupSelectedStyles();
+    }
+    function toggleGroupPerson(name){
+      let arr = getGroupSelected();
+      if(arr.includes(name)) arr = arr.filter(x=>x!==name);
+      else{
+        if(arr.length>=5){ toast("그룹은 최대 5명까지 선택 가능합니다."); return; }
+        arr.push(name);
+      }
+      setGroupSelected(arr);
+    }
+    function updateGroupSelectedStyles(){
+      const selected = new Set(getGroupSelected());
+      $$("#groupSelected .persona-pill").forEach(el=>{
+        if(selected.has(el.dataset.name)){
+          el.style.borderColor = "var(--brand)";
+          el.style.background = "#fafaff";
+        }else{
+          el.style.borderColor = "#e5e7eb";
+          el.style.background = "#fff";
+        }
+      });
     }
 
-    // ---------------- 액션 ----------------
-    async function loadPersonas(){
-      const res = await API.list();
-      state.personas = res.items || [];
-      renderPersonaCards();
+    // 샘플
+    function loadSamplePersonas(){
+      const samples = [
+        {name:"도경성", role:"익스퍼리언스 디자이너", traits:"아이폰, 최종주자, 40대, 가성비", bio:"데이터 기반 의사결정, SNS활동"},
+        {name:"서울 30대 직장인 Alex", role:"광고 AE(모바일 퍼포먼스)", traits:"실용주의, 데이터중심, 가성비, SNS활동", bio:"브랜드 관심 높음, 유튜브/인스타 소비"}
+      ];
+      const cur = loadPersonas();
+      savePersonas([...samples, ...cur].slice(0,5));
+      renderPersonaList();
     }
 
-    async function savePersona(){
-      const name=$('#pName').value.trim(); if(!name) return alert('이름을 입력하세요');
-      const body = {
-        name,
-        role: $('#pRole').value.trim(),
-        traits: $('#pTraits').value.trim(),
-        desc: $('#pDesc').value.trim()
-      };
-      await API.save(body);
-      $('#pName').value=''; $('#pRole').value=''; $('#pTraits').value=''; $('#pDesc').value='';
-      await loadPersonas();
+    // -------- 모드 토글
+    function currentMode(){ return modeLive.checked ? "live" : "demo"; }
+    modeDemo.addEventListener("change", ()=> modeChanged());
+    modeLive.addEventListener("change", ()=> modeChanged());
+    function modeChanged(){
+      const m = currentMode();
+      modeBadge.textContent = m==="live" ? "LIVE" : "DEMO";
+      modeBadge.style.background = m==="live" ? "#e6fff3" : "#e9eefb";
+      modeBadge.style.color = m==="live" ? "#15803d" : "#4252d9";
     }
 
-    function openEdit(p){
-      $('#pName').value=p.name||''; $('#pRole').value=p.role||''; $('#pTraits').value=p.traits||''; $('#pDesc').value=p.desc||'';
-      // 서버가 upsert면 그냥 저장 버튼으로 덮어쓰기, 아니면 update 라우트 추가 필요
-    }
+    // -------- 솔로 대화
+    $("#btnAskSolo").addEventListener("click", async ()=>{
+      const name = $("#soloPersonaSelect").value;
+      const q = $("#soloQuestion").value.trim();
+      const limit = parseInt($("#soloLimit").value,10) || 20;
+      if(!name) return toast("페르소나를 선택하세요.");
+      if(!q) return toast("질문을 적어주세요.");
+      const p = loadPersonas().find(x=>x.name===name);
+      if(!p) return toast("선택한 페르소나를 찾을 수 없습니다.");
 
-    async function removePersona(id){
-      if(!confirm('정말 삭제할까요?')) return;
-      await API.remove(id);
-      await loadPersonas();
-    }
-
-    async function askSolo(){
-      const personaId = $('#soloPersonaSelect').value;
-      const q = $('#soloQuestion').value.trim();
-      const limit = Number($('#soloContextLimit').value||20);
-      if(!personaId) return alert('페르소나 선택');
-      if(!q) return alert('질문 입력');
-      const res = await API.solo({ personaId, question:q, limit });
-      $('#soloAnswer').textContent = res.output || '(응답 없음)';
-    }
-
-    async function startGroup(){
-      if(state.picks.size===0) return alert('최소 1명 선택');
-      const personas = Array.from(state.picks);
-      const topic = $('#groupTopic').value.trim() || '토픽 없음';
-      const rounds = Number($('#groupRounds').value||2);
-      const limit = Number($('#groupContextLimit').value||20);
-      const res = await API.group({ personas, topic, rounds, limit });
-      $('#groupAnswer').textContent = res.output || '(응답 없음)';
-    }
-
-    // 이벤트
-    $('#btnSave').onclick = savePersona;
-    $('#btnReload').onclick = loadPersonas;
-    $('#btnAsk').onclick = askSolo;
-    $('#btnGroupStart').onclick = startGroup;
-    $('#goSolo').onclick = ()=> $('#soloCard').scrollIntoView({behavior:'smooth'});
-    $('#goGroup').onclick = ()=> document.querySelectorAll('.card')[2].scrollIntoView({behavior:'smooth'});
-
-    // 시작
-    loadPersonas().catch(e=>{
-      setDemoMode(true);
-      alert('페르소나 목록 로드 실패');
+      const out = $("#soloAnswer");
+      out.style.display = "block";
+      if(currentMode()==="demo"){
+        out.textContent = `[DEMO] ${p.name}의 시점으로 답변합니다.\n\nQ. ${q}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
+        return;
+      }
+      // LIVE 호출
+      try{
+        out.textContent = "[LIVE] 서버 응답 대기중...";
+        const res = await fetch("/chat/solo",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ persona:p, question:q, historyLimit:limit })
+        });
+        if(!res.ok){
+          const t = await res.text();
+          throw new Error(`HTTP ${res.status} - ${t}`);
+        }
+        const data = await res.json();
+        out.textContent = (data.answer||"").trim() || "(빈 응답)";
+      }catch(err){
+        out.textContent = `오류: ${err.message}`;
+      }
     });
+
+    // -------- 그룹 대화
+    $("#btnStartGroup").addEventListener("click", async ()=>{
+      const names = getGroupSelected();
+      const list = loadPersonas().filter(p=>names.includes(p.name));
+      if(list.length===0) return toast("그룹에 참여시킬 페르소나를 한 명 이상 선택하세요.");
+      const topic = $("#groupTopic").value.trim() || "자유 토론";
+      const rounds = parseInt($("#groupRounds").value,10) || 2;
+      const limit = parseInt($("#groupLimit").value,10) || 20;
+
+      const out = $("#groupAnswer");
+      out.style.display = "block";
+      if(currentMode()==="demo"){
+        const heads = list.map(p=>p.name).join(", ");
+        out.textContent = `[DEMO] (${heads}) 라운드 ${rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
+        return;
+      }
+      // LIVE 호출
+      try{
+        out.textContent = "[LIVE] 서버 응답 대기중...";
+        const res = await fetch("/chat/group",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit })
+        });
+        if(!res.ok){
+          const t = await res.text();
+          throw new Error(`HTTP ${res.status} - ${t}`);
+        }
+        const data = await res.json();
+        out.textContent = (data.transcript||"").trim() || "(빈 응답)";
+      }catch(err){
+        out.textContent = `오류: ${err.message}`;
+      }
+    });
+
+    // -------- 저장/편집/삭제
+    $("#btnSavePersona").addEventListener("click", ()=>{
+      const p = {
+        name: $("#pName").value.trim(),
+        role: $("#pRole").value.trim(),
+        traits: $("#pTraits").value.trim(),
+        bio: $("#pBio").value.trim()
+      };
+      if(!p.name){ toast("이름/별칭은 필수입니다."); return; }
+      if(addPersona(p)){
+        $("#pName").value = $("#pRole").value = $("#pTraits").value = $("#pBio").value = "";
+        renderPersonaList();
+      }
+    });
+    $("#btnLoadSamples").addEventListener("click", loadSamplePersonas);
+    $("#btnRefreshList").addEventListener("click", renderPersonaList);
+
+    // 초기화
+    modeChanged();
+    renderPersonaList();
   </script>
 </body>
 </html>
