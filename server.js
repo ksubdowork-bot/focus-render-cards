@@ -24,8 +24,36 @@ app.get("/", (req, res) => {
 });
 
 // ---------------------- 임시 메모리 저장소 (Upstash 미사용 시)
-const personas = {}; // { id: { id, name, role, traits, description } }
-
+const personas = {
+  "p1": {
+    id: "p1",
+    name: "도경섭",
+    role: "익스피리언스 디자이너",
+    traits: "아이폰, 활동적, 40대, 가정인",
+    description: "일상에서 아이폰을 사용하며 패밀리 공유를 적극 활용하는 디자이너"
+  },
+  "p2": {
+    id: "p2",
+    name: "정우주",
+    role: "크리에티브 디랙터",
+    traits: "갤럭시, 데이터 중심, 30대 직장인",
+    description: "광고 캠페인을 관리하며 스마트싱스를 자주 활용"
+  },
+  "p3": {
+    id: "p3",
+    name: "김수정",
+    role: "대학생",
+    traits: "아이폰, SNS 활동 활발, 20대",
+    description: "트렌드에 민감하고 SNS 중심의 생활 패턴"
+  },
+  "p4": {
+    id: "p4",
+    name: "한주명",
+    role: "프리랜서 개발자",
+    traits: "갤럭시, 실용주의, 30대",
+    description: "스마트워치와 노트 시리즈를 필수 툴로 활용"
+  }
+};
 // ===== 페르소나 CRUD (프런트에서 필요하면 사용) =====
 app.get("/personas-list", (req, res) => {
   res.json({ ok: true, items: Object.values(personas) });
