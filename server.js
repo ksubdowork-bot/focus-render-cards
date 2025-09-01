@@ -1,4 +1,39 @@
 // server.js
+
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// SOLO 대화
+app.post("/chat/solo", async (req, res) => {
+  const { persona, question, historyLimit } = req.body;
+  console.log("솔로 요청:", persona, question, historyLimit);
+
+  // 실제 OpenAI API 호출로 교체 가능
+  res.json({
+    answer: `[LIVE 응답] ${persona.name}의 시점에서 ${question} 에 답변합니다. (historyLimit=${historyLimit})`
+  });
+});
+
+// GROUP 대화
+app.post("/chat/group", async (req, res) => {
+  const { personas, topic, rounds, historyLimit } = req.body;
+  console.log("그룹 요청:", personas.map(p=>p.name), topic, rounds, historyLimit);
+
+  res.json({
+    transcript: `[LIVE 응답] ${personas.map(p=>p.name).join(", ")} 가 ${rounds}라운드 동안 "${topic}" 주제로 토론했습니다. (historyLimit=${historyLimit})`
+  });
+});
+
+// 서버 실행
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
