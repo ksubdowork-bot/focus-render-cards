@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AI 포커스 그룹</title>
-
   <style>
     :root{
       --bg:#f7f8fb; --card:#fff; --txt:#212529; --muted:#667085;
@@ -12,74 +11,41 @@
       --ring:rgba(91,108,255,.25);
     }
     *{box-sizing:border-box}
-    body{
-      margin:0; background:var(--bg); color:var(--txt);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
-      line-height:1.45;
-    }
+    body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
     .wrap{max-width:1080px;margin:28px auto;padding:0 16px}
     h1{font-size:22px;margin:0 0 16px}
-    .hint{font-size:12px;color:var(--muted);}
-
-    /* 카드 */
-    .card{
-      background:var(--card); border-radius:14px; box-shadow:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.02);
-      padding:16px; margin:14px 0; border:1px solid #eef1f4;
-    }
-    .card-row{display:grid; gap:12px}
+    .badge{font-size:11px;padding:2px 8px;border-radius:999px;background:#fff0cc;color:#b26f00;border:1px solid #ffe3a1;margin-left:8px}
+    .hint{font-size:12px;color:var(--muted)}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.02);padding:16px;margin:14px 0;border:1px solid #eef1f4}
+    .card-row{display:grid;gap:12px}
     @media(min-width:700px){ .card-row{grid-template-columns:repeat(3,1fr)} }
-
-    .persona-card{
-      border:1px solid #eef1f4; border-radius:12px; padding:12px; background:#fff;
-      display:flex; flex-direction:column; gap:6px; position:relative;
-      cursor:pointer;
-      transition:transform .05s ease, border-color .15s ease, box-shadow .15s ease;
-    }
-    .persona-card:hover{ border-color:#dfe6ee; box-shadow:0 0 0 3px var(--ring) }
-    .persona-card.active{ outline:2px solid var(--primary); outline-offset:2px }
+    .persona-card{border:1px solid #eef1f4;border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:6px;position:relative;cursor:pointer;transition:transform .05s ease,border-color .15s ease,box-shadow .15s ease}
+    .persona-card:hover{border-color:#dfe6ee;box-shadow:0 0 0 3px var(--ring)}
+    .persona-card.active{outline:2px solid var(--primary);outline-offset:2px}
     .persona-name{font-weight:700}
     .persona-role,.persona-traits,.persona-desc{font-size:12px;color:var(--muted)}
-    .persona-actions{display:flex; gap:6px; position:absolute; right:10px; top:8px}
-    .tag{font-size:11px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#3344dd}
-
-    /* 입력 UI */
-    .row{display:grid; gap:10px}
+    .persona-actions{display:flex;gap:6px;position:absolute;right:10px;top:8px}
+    .tag{font-size:11px;padding:2px 6px;border-radius:999px;background:#eef2ff;color:#3344dd}
+    .row{display:grid;gap:10px}
     @media(min-width:720px){ .row-2{grid-template-columns:1fr 1fr} }
-    .input,select,textarea{
-      width:100%; padding:11px 12px; border:1px solid #e6e9ef; border-radius:11px; background:#fff;
-      font-size:14px; outline:none;
-    }
-    .input:focus, select:focus, textarea:focus{border-color:var(--primary); box-shadow:0 0 0 3px var(--ring)}
-
-    .btn{
-      appearance:none; border:0; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer;
-      background:#eef1f6; color:#2b2f36;
-    }
-    .btn-primary{background:var(--primary); color:#fff}
-    .btn-primary:hover{background:var(--primary-600)}
-    .btn-danger{background:#ffe5e5; color:#b32525}
-    .btn-ghost{background:transparent; color:var(--muted)}
-    .btn-green{background:var(--green); color:#fff}
-    .btn-sm{padding:6px 10px; font-size:12px; border-radius:8px}
-
-    .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    .section-title{font-weight:700; margin:4px 0 10px}
-
-    /* 답변 박스(짙은 회색 배경 + 흰 글씨) */
-    .answer{
-      background:#1f2430; color:#fff; white-space:pre-wrap; padding:14px; border-radius:12px; font-size:14px;
-      border:1px solid #2b3140;
-    }
-
-    /* 시각적으로 숨김(접근성 유지) */
-    .visually-hidden{position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+    .input,select,textarea{width:100%;padding:11px 12px;border:1px solid #e6e9ef;border-radius:11px;background:#fff;font-size:14px;outline:none}
+    .input:focus, select:focus, textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--ring)}
+    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;background:#eef1f6;color:#2b2f36}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-600)}
+    .btn-danger{background:#ffe5e5;color:#b32525}.btn-ghost{background:transparent;color:var(--muted)}
+    .btn-green{background:var(--green);color:#fff}
+    .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .section-title{font-weight:700;margin:4px 0 10px}
+    .answer{background:#1f2430;color:#fff;white-space:pre-wrap;padding:14px;border-radius:12px;font-size:14px;border:1px solid #2b3140}
+    .visually-hidden{position:absolute !important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>AI 포커스 그룹 <span class="hint">DEMO</span></h1>
+    <h1>AI 포커스 그룹 <span id="demoBadge" class="badge" style="display:none">DEMO(로컬 저장 모드)</span></h1>
 
-    <!-- ============= 1) 페르소나 입력/저장 ============= -->
+    <!-- 1) 페르소나 입력/저장 -->
     <div class="card">
       <div class="toolbar" style="justify-content:space-between;margin-bottom:8px">
         <div class="section-title">1) 페르소나 입력/저장</div>
@@ -102,7 +68,6 @@
       <div style="height:12px"></div>
       <div class="toolbar">
         <button class="btn btn-primary" id="btnSave">페르소나 저장</button>
-        <button class="btn" id="btnSamples">샘플 불러오기</button>
         <button class="btn" id="btnReload">목록 새로고침</button>
       </div>
 
@@ -112,20 +77,17 @@
       <div class="hint">* 카드 클릭 시 아래 솔로/그룹 입력란에 자동 적용됩니다. (ID는 화면에 표시되지 않습니다)</div>
     </div>
 
-    <!-- ============= 2) 솔로 대화(이력 유지) ============= -->
+    <!-- 2) 솔로 대화(이력 유지) -->
     <div class="card" id="soloCard">
       <div class="section-title">2) 솔로 대화(이력 유지)</div>
 
-      <!-- 페르소나 이름으로 선택(내부 value는 ID) -->
+      <!-- 이름으로만 보이는 셀렉트(내부 value는 id) -->
       <select class="input" id="soloPersonaSelect" aria-label="페르소나 선택"></select>
 
       <div style="height:8px"></div>
       <div class="row row-2">
-        <!-- 세션 ID/세션 불러오기 버튼은 UI에서 제거 (접근성용 hidden만 유지) -->
         <input id="soloSessionId" class="visually-hidden" readonly />
-        <div class="visually-hidden">
-          <button id="btnSoloLoad" class="btn">세션 이력 불러오기</button>
-        </div>
+        <div class="visually-hidden"><button id="btnSoloLoad" class="btn">세션 이력 불러오기</button></div>
         <label class="visually-hidden" for="soloContextLimit">최근 컨텍스트 제한</label>
         <select class="input" id="soloContextLimit">
           <option value="10">10</option>
@@ -139,14 +101,13 @@
       <div style="height:10px"></div>
       <div class="toolbar">
         <button class="btn btn-primary" id="btnAsk">질문하기</button>
-        <div class="visually-hidden"><button class="btn" id="btnSoloHistory">세션 이력 불러오기</button></div>
       </div>
 
       <div style="height:12px"></div>
       <div id="soloAnswer" class="answer"></div>
     </div>
 
-    <!-- ============= 3) 그룹 대화(최대 5명) ============= -->
+    <!-- 3) 그룹 대화(최대 5명) -->
     <div class="card">
       <div class="section-title">3) 그룹 대화(최대 5명)</div>
       <div class="hint">아래 목록에서 페르소나를 최대 5명까지 체크하세요. 순서대로 발언합니다.</div>
@@ -178,7 +139,7 @@
       <div id="groupAnswer" class="answer"></div>
     </div>
 
-    <!-- ============= 4) 세션 히스토리 불러오기 (UI 감춤) ============= -->
+    <!-- 4) 세션 히스토리 UI는 숨김 -->
     <div class="visually-hidden" id="historySection">
       <div class="card">
         <div class="section-title">4) 세션 히스토리 불러오기</div>
@@ -190,206 +151,231 @@
   </div>
 
   <script>
-    // ====== 간단한 상태 ======
+    // ---------------- 상태/유틸 ----------------
     const state = {
-      personas: [],          // {id, name, role, traits, desc}
-      selectedPersonaId: '', // solo 선택
-      picks: new Set(),      // group 선택
-      demo: true             // 데모/실제 토글은 서버 설정과 연결된 기존 로직 유지
+      personas: [],
+      selectedPersonaId: '',
+      picks: new Set(),
+      demo: false        // 서버 API 실패 시 자동 true (localStorage 사용)
+    };
+    const $ = s => document.querySelector(s);
+
+    function setDemoMode(on){
+      state.demo = !!on;
+      $('#demoBadge').style.display = on ? 'inline-block' : 'none';
+    }
+
+    // --------------- API 래퍼 (다중 경로 + 폴백) ---------------
+    async function apiTry(paths, opts={}){
+      let lastErr;
+      for(const path of paths){
+        try{
+          const r = await fetch(path, {
+            headers: {'Content-Type':'application/json'},
+            ...opts
+          });
+          if(r.ok) return await r.json();
+          lastErr = new Error(`HTTP ${r.status} @ ${path}`);
+        }catch(e){ lastErr = e; }
+      }
+      throw lastErr;
+    }
+
+    const API = {
+      // 목록: /api/persona/list -> /api/personas -> (로컬)
+      async list(){
+        try{
+          const res = await apiTry(['/api/persona/list','/api/personas']);
+          setDemoMode(false);
+          return res;
+        }catch(e){
+          console.warn('list() failed, fallback to localStorage:', e);
+          setDemoMode(true);
+          const items = JSON.parse(localStorage.getItem('personas')||'[]');
+          return { ok:true, items };
+        }
+      },
+      // 저장: /api/persona/save -> /api/personas
+      async save(body){
+        try{
+          const res = await apiTry(
+            ['/api/persona/save','/api/personas'],
+            { method:'POST', body: JSON.stringify(body) }
+          );
+          setDemoMode(false);
+          return res;
+        }catch(e){
+          // localStorage 저장 (id 없으면 생성)
+          setDemoMode(true);
+          const items = JSON.parse(localStorage.getItem('personas')||'[]');
+          const id = crypto.randomUUID();
+          items.push({ id, ...body });
+          localStorage.setItem('personas', JSON.stringify(items));
+          return { ok:true, id };
+        }
+      },
+      // 삭제: /api/persona/:id -> /api/personas/:id
+      async remove(id){
+        try{
+          const res = await apiTry(
+            [`/api/persona/${encodeURIComponent(id)}`, `/api/personas/${encodeURIComponent(id)}`],
+            { method:'DELETE' }
+          );
+          setDemoMode(false);
+          return res;
+        }catch(e){
+          setDemoMode(true);
+          const items = JSON.parse(localStorage.getItem('personas')||'[]').filter(x=>x.id!==id);
+          localStorage.setItem('personas', JSON.stringify(items));
+          return { ok:true };
+        }
+      },
+      // 솔로: /api/chat/solo -> /api/solo
+      async solo(body){
+        try{
+          const res = await apiTry(
+            ['/api/chat/solo','/api/solo'],
+            { method:'POST', body: JSON.stringify(body) }
+          );
+          setDemoMode(false);
+          return res;
+        }catch(e){
+          setDemoMode(true);
+          const p = state.personas.find(x=>x.id===body.personaId);
+          const name = p?.name || '페르소나';
+          return { ok:true, output:`[DEMO] ${name}의 시점으로 답합니다.\n\nQ. ${body.question}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 사용됩니다.` };
+        }
+      },
+      // 그룹: /api/chat/group -> /api/group
+      async group(body){
+        try{
+          const res = await apiTry(
+            ['/api/chat/group','/api/group'],
+            { method:'POST', body: JSON.stringify(body) }
+          );
+          setDemoMode(false);
+          return res;
+        }catch(e){
+          setDemoMode(true);
+          const names = body.personas.map(id=>state.personas.find(p=>p.id===id)?.name||'이름없음').join(', ');
+          return { ok:true, output:`[DEMO] 그룹(${names}) 라운드 ${body.rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 사용됩니다.` };
+        }
+      }
     };
 
-    // ====== 유틸 ======
-    const $ = s => document.querySelector(s);
-    const $$ = s => document.querySelectorAll(s);
-
-    function toast(msg){ console.log(msg); }
-
-    // ====== 서버 API 래퍼 (기존 server.js 라우트에 맞춰 사용) ======
-    async function api(url, opts={}){
-      const r = await fetch(url, { headers: {'Content-Type':'application/json'}, ...opts });
-      if(!r.ok) throw new Error(await r.text());
-      return r.json();
-    }
-
-    // ====== 페르소나 목록 로드 & 렌더 ======
-    async function loadPersonas(){
-      // 서버에서 목록 읽기
-      const res = await api('/api/persona/list');
-      state.personas = res.items || [];
-      renderPersonaCards();
-      fillPersonaSelects();
-    }
-
+    // ---------------- 렌더링 ----------------
     function renderPersonaCards(){
-      // 저장된 페르소나 카드 (상단)
-      const wrap = $('#personaList'); wrap.innerHTML = '';
-      // 그룹 선택 카드
-      const groupWrap = $('#groupPick'); groupWrap.innerHTML = '';
+      const list = $('#personaList'); list.innerHTML='';
+      const pick = $('#groupPick'); pick.innerHTML='';
 
       state.personas.forEach(p=>{
-        // === 상단 카드(편집/삭제/선택) ===
+        // 상단 카드
         const card = document.createElement('div');
-        card.className = 'persona-card';
-        card.dataset.id = p.id; // 내부에만 보관, 화면에는 표시하지 않음
+        card.className = 'persona-card'; card.dataset.id = p.id;
+        const name = document.createElement('div'); name.className='persona-name'; name.textContent=p.name||'(이름없음)';
+        const role = document.createElement('div'); role.className='persona-role'; role.textContent=p.role||'';
+        const traits = document.createElement('div'); traits.className='persona-traits'; traits.textContent=(p.traits||'').replaceAll(',',', ');
+        const desc = document.createElement('div'); desc.className='persona-desc'; desc.textContent=p.desc||'';
+        const act = document.createElement('div'); act.className='persona-actions';
+        const edit = document.createElement('button'); edit.className='btn btn-sm'; edit.textContent='편집';
+        edit.onclick = (e)=>{ e.stopPropagation(); openEdit(p); };
+        const del = document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='삭제';
+        del.onclick = async (e)=>{ e.stopPropagation(); await removePersona(p.id); };
+        act.append(edit,del);
+        card.append(act,name,role,traits,desc);
+        card.onclick = ()=>{ state.selectedPersonaId = p.id; $('#soloPersonaSelect').value=p.id; };
+        list.append(card);
 
-        const name = document.createElement('div');
-        name.className = 'persona-name';
-        name.textContent = p.name || '(이름없음)';
-
-        const role = document.createElement('div');
-        role.className = 'persona-role';
-        role.textContent = p.role || '';
-
-        const traits = document.createElement('div');
-        traits.className = 'persona-traits';
-        traits.textContent = (p.traits||'').replaceAll(',', ', ');
-
-        const desc = document.createElement('div');
-        desc.className = 'persona-desc';
-        desc.textContent = p.desc || '';
-
-        const actions = document.createElement('div');
-        actions.className = 'persona-actions';
-        const editBtn = document.createElement('button');
-        editBtn.className = 'btn btn-sm';
-        editBtn.textContent = '편집';
-        editBtn.onclick = (e)=>{ e.stopPropagation(); openEdit(p); };
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-danger btn-sm';
-        delBtn.textContent = '삭제';
-        delBtn.onclick = (e)=>{ e.stopPropagation(); removePersona(p.id); };
-
-        actions.append(editBtn, delBtn);
-
-        const tag = document.createElement('span'); tag.className='tag'; tag.textContent='선택';
-        tag.style.position='absolute'; tag.style.left='10px'; tag.style.top='8px'; tag.style.display='none';
-
-        card.append(actions, tag, name, role, traits, desc);
-        card.onclick = ()=>{
-          // 카드 클릭 시 솔로/그룹 선택 자동 설정
-          state.selectedPersonaId = p.id;
-          $('#soloPersonaSelect').value = p.id;
-          toast('솔로 대화에 선택되었습니다.');
-        };
-        wrap.append(card);
-
-        // === 그룹 선택용 카드 ===
+        // 그룹 선택 카드
         const g = document.createElement('div');
-        g.className = 'persona-card';
-        g.dataset.id = p.id;
-        g.onclick = ()=>{
-          if(state.picks.has(p.id)){
-            state.picks.delete(p.id); g.classList.remove('active');
-          }else{
-            if(state.picks.size >= 5){ alert('최대 5명까지 선택할 수 있어요'); return; }
-            state.picks.add(p.id); g.classList.add('active');
-          }
-        };
+        g.className='persona-card'; g.dataset.id=p.id;
         const gn = document.createElement('div'); gn.className='persona-name'; gn.textContent=p.name||'(이름없음)';
         const gr = document.createElement('div'); gr.className='persona-role'; gr.textContent=p.role||'';
         const gt = document.createElement('div'); gt.className='persona-traits'; gt.textContent=(p.traits||'').replaceAll(',',', ');
         g.append(gn,gr,gt);
-        groupWrap.append(g);
+        g.onclick = ()=>{
+          if(state.picks.has(p.id)){ state.picks.delete(p.id); g.classList.remove('active'); }
+          else{
+            if(state.picks.size>=5) return alert('최대 5명까지 선택');
+            state.picks.add(p.id); g.classList.add('active');
+          }
+        };
+        pick.append(g);
       });
-    }
 
-    function fillPersonaSelects(){
-      const sel = $('#soloPersonaSelect');
-      sel.innerHTML = '';
+      // 셀렉트 채우기
+      const sel = $('#soloPersonaSelect'); sel.innerHTML='';
       state.personas.forEach(p=>{
-        const o = document.createElement('option');
-        o.value = p.id;              // 내부 값은 id
-        o.textContent = p.name||'';  // 화면에는 이름만 보임
-        sel.append(o);
+        const o=document.createElement('option'); o.value=p.id; o.textContent=p.name||'(이름없음)'; sel.append(o);
       });
-      // 기존 선택 유지
-      if(state.selectedPersonaId){ sel.value = state.selectedPersonaId; }
-      else if(state.personas[0]){ sel.value = state.personas[0].id; state.selectedPersonaId = sel.value; }
+      if(state.selectedPersonaId) sel.value=state.selectedPersonaId;
+      else if(state.personas[0]){ sel.value=state.personas[0].id; state.selectedPersonaId=sel.value; }
     }
 
-    // ====== 저장/편집/삭제 ======
-    async function savePersona(){
-      const name = $('#pName').value.trim();
-      const role = $('#pRole').value.trim();
-      const traits = $('#pTraits').value.trim();
-      const desc = $('#pDesc').value.trim();
-      if(!name){ alert('이름을 입력해 주세요'); return; }
+    // ---------------- 액션 ----------------
+    async function loadPersonas(){
+      const res = await API.list();
+      state.personas = res.items || [];
+      renderPersonaCards();
+    }
 
-      const res = await api('/api/persona/save', {
-        method:'POST',
-        body: JSON.stringify({ name, role, traits, desc })
-      });
-      toast(res);
+    async function savePersona(){
+      const name=$('#pName').value.trim(); if(!name) return alert('이름을 입력하세요');
+      const body = {
+        name,
+        role: $('#pRole').value.trim(),
+        traits: $('#pTraits').value.trim(),
+        desc: $('#pDesc').value.trim()
+      };
+      await API.save(body);
+      $('#pName').value=''; $('#pRole').value=''; $('#pTraits').value=''; $('#pDesc').value='';
       await loadPersonas();
-      // 입력 초기화
-      $('#pName').value = ''; $('#pRole').value=''; $('#pTraits').value=''; $('#pDesc').value='';
     }
 
     function openEdit(p){
-      // 입력창으로 불러와 편집
-      $('#pName').value = p.name||'';
-      $('#pRole').value = p.role||'';
-      $('#pTraits').value = p.traits||'';
-      $('#pDesc').value = p.desc||'';
-      // 저장시 새로 생성 대신 서버에서 upsert가 동작하도록 API가 구성돼 있다면 그대로 사용.
-      // 만약 별도의 /update 라우트라면 그에 맞춰 바꿔주세요.
+      $('#pName').value=p.name||''; $('#pRole').value=p.role||''; $('#pTraits').value=p.traits||''; $('#pDesc').value=p.desc||'';
+      // 서버가 upsert면 그냥 저장 버튼으로 덮어쓰기, 아니면 update 라우트 추가 필요
     }
 
     async function removePersona(id){
       if(!confirm('정말 삭제할까요?')) return;
-      await api(`/api/persona/${encodeURIComponent(id)}`, { method:'DELETE' });
+      await API.remove(id);
       await loadPersonas();
     }
 
-    // 샘플/리로드
-    async function loadSamples(){
-      await api('/api/persona/samples', { method:'POST' }); // 서버에 샘플 삽입 라우트가 있다면 사용
-      await loadPersonas();
-    }
-
-    // ====== 솔로 질문 ======
     async function askSolo(){
       const personaId = $('#soloPersonaSelect').value;
       const q = $('#soloQuestion').value.trim();
       const limit = Number($('#soloContextLimit').value||20);
-      if(!personaId){ alert('페르소나를 선택하세요'); return; }
-      if(!q){ alert('질문을 입력하세요'); return; }
-
-      const res = await api('/api/chat/solo', {
-        method:'POST',
-        body: JSON.stringify({ personaId, question:q, limit })
-      });
+      if(!personaId) return alert('페르소나 선택');
+      if(!q) return alert('질문 입력');
+      const res = await API.solo({ personaId, question:q, limit });
       $('#soloAnswer').textContent = res.output || '(응답 없음)';
     }
 
-    // ====== 그룹 대화 ======
     async function startGroup(){
-      if(state.picks.size===0){ alert('최소 1명 이상 선택하세요'); return; }
+      if(state.picks.size===0) return alert('최소 1명 선택');
       const personas = Array.from(state.picks);
       const topic = $('#groupTopic').value.trim() || '토픽 없음';
       const rounds = Number($('#groupRounds').value||2);
       const limit = Number($('#groupContextLimit').value||20);
-
-      const res = await api('/api/chat/group', {
-        method:'POST',
-        body: JSON.stringify({ personas, topic, rounds, limit })
-      });
+      const res = await API.group({ personas, topic, rounds, limit });
       $('#groupAnswer').textContent = res.output || '(응답 없음)';
     }
 
-    // ====== 이벤트 바인딩 ======
+    // 이벤트
     $('#btnSave').onclick = savePersona;
-    $('#btnSamples').onclick = loadSamples;
     $('#btnReload').onclick = loadPersonas;
     $('#btnAsk').onclick = askSolo;
     $('#btnGroupStart').onclick = startGroup;
-    $('#soloPersonaSelect').onchange = (e)=>{ state.selectedPersonaId = e.target.value; };
+    $('#goSolo').onclick = ()=> $('#soloCard').scrollIntoView({behavior:'smooth'});
+    $('#goGroup').onclick = ()=> document.querySelectorAll('.card')[2].scrollIntoView({behavior:'smooth'});
 
-    // 네비(옵션)
-    $('#goSolo').onclick = ()=> $('#soloCard').scrollIntoView({behavior:'smooth', block:'start'});
-
-    // 최초 로드
-    loadPersonas().catch(err=>{ console.error(err); alert('페르소나 목록 로드 실패'); });
+    // 시작
+    loadPersonas().catch(e=>{
+      setDemoMode(true);
+      alert('페르소나 목록 로드 실패');
+    });
   </script>
 </body>
 </html>
