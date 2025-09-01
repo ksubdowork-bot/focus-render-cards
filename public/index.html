@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>AI 포커스 그룹</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>AI 포커스 그룹 <span id="mode">(DEMO)</span></h1>
+  <label><input type="checkbox" id="liveToggle"> 실제 모드</label>
+
+  <section>
+    <h2>1) 페르소나 저장 (최대 5명)</h2>
+    <input id="pname" placeholder="이름">
+    <input id="prole" placeholder="역할/직무">
+    <input id="ptraits" placeholder="성향">
+    <textarea id="pdesc" placeholder="설명"></textarea>
+    <button onclick="savePersona()">페르소나 저장</button>
+  </section>
+
+  <section>
+    <h2>저장된 페르소나</h2>
+    <div id="cards"></div>
+  </section>
+
+  <section>
+    <h2>2) 솔로 대화</h2>
+    <select id="soloSelect"></select>
+    <input id="soloQ" placeholder="질문">
+    <button onclick="askSolo()">질문하기</button>
+    <pre id="soloA"></pre>
+  </section>
+
+  <section>
+    <h2>3) 그룹 대화</h2>
+    <input id="groupQ" placeholder="모더레이터 질문">
+    <button onclick="askGroup()">그룹 대화 시작</button>
+    <pre id="groupA"></pre>
+  </section>
+
+  <script>
+  let forceDemo = true;
+  document.getElementById("liveToggle").addEventListener("change", e=>{
+    forceDemo = !e.target.checked;
+    document.getElementById("mode").innerText = forceDemo ? "(DEMO)" : "(LIVE)";
+  });
+
+  async function savePersona(){
+    const id = Date.now().toString();
+    const p = {
+      id, name: document.getElementById("pname").value,
+      role: document.getElementById("prole").value,
+      traits: document.getElementById("ptraits").value,
+      description: document.getElementById("pdesc").value
+    };
+    await fetch("/api/persona",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
+    loadCards();
+  }
+
+  async function loadCards(){
+    const res = await fetch("/api/personas-list");
+    const data = await res.json();
+    const cards = document.getElementById("cards");
+    cards.innerHTML = "";
+    const select = document.getElementById("soloSelect");
+    select.innerHTML = "";
+    (data.items||[]).forEach(p=>{
+      const div=document.createElement("div");
+      div.className="card";
+      div.innerHTML=`<b>${p.name}</b> (${p.role}) <button onclick="delPersona('${p.id}')">삭제</button>`;
+      div.onclick=()=>{document.getElementById("soloSelect").value=p.id};
+      cards.appendChild(div);
+      const opt=document.createElement("option");
+      opt.value=p.id; opt.textContent=p.name;
+      select.appendChild(opt);
+    });
+  }
+
+  async function delPersona(id){
+    await fetch("/api/persona/"+id,{method:"DELETE"});
+    loadCards();
+  }
+
+  async function askSolo(){
+    const id=document.getElementById("soloSelect").value;
+    const q=document.getElementById("soloQ").value;
+    const res=await fetch("/api/personas-list");
+    const list=await res.json();
+    const persona=list.items.find(p=>p.id===id);
+    const r=await fetch("/api/chat-solo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({persona,question:q,forceDemo})});
+    const j=await r.json();
+    document.getElementById("soloA").innerText=j.answer.content;
+  }
+
+  async function askGroup(){
+    const res=await fetch("/api/personas-list");
+    const list=await res.json();
+    const q=document.getElementById("groupQ").value;
+    const r=await fetch("/api/chat-group",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({personas:list.items,question:q,rounds:2,forceDemo})});
+    const j=await r.json();
+    document.getElementById("groupA").innerText=j.transcript.map(t=>t.speaker+": "+t.text).join("\\n")+"\\n---\\n요약: "+j.summary;
+  }
+
+  loadCards();
+  </script>
+</body>
+</html>
