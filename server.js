@@ -143,16 +143,30 @@ app.post("/chat/group", async (req, res) => {
 
 // ---------------------- OpenAI helper (Responses API)
 async function openaiChat(messages) {
+  // messages = [{ role: "system"|"user"|"assistant", content: "..." }, ...]
+  const prompt = messages
+    .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+    .join("\n");
+
   const r = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      // 단순 텍스트 입력으로 변환
-      input: messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n")
+      input: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",    // ← 필수: text가 아니라 input_text
+              text: prompt
+            }
+          ]
+        }
+      ]
     })
   });
 
@@ -162,13 +176,15 @@ async function openaiChat(messages) {
   }
 
   const data = await r.json();
-  try {
-    const block = data.output?.[0];
-    const txt = block?.content?.[0]?.text;
-    return txt || JSON.stringify(data);
-  } catch {
-    return JSON.stringify(data);
-  }
+
+  // 응답 파싱: 최신 Responses API 우선 → 과거 포맷 보조
+  const txt =
+    data.output_text ??
+    data.output?.[0]?.content?.[0]?.text ??
+    data.choices?.[0]?.message?.content ??
+    JSON.stringify(data);
+
+  return txt;
 }
 
 // ---------------------- 서버 시작
