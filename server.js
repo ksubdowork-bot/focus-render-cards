@@ -103,7 +103,7 @@ app.post("/chat/solo", async (req, res) => {
 
     // LIVE (OpenAI Responses API)
     const messages = [
-      { role: "system", content: `너는 다음 페르소나처럼 답변하는데, 오프라인 체험 및 모바일기기 사용에 관해서는 꼭 포함시켜: 이름:${p.name}, 역할:${p.role}, 성향:${p.traits}. 한글로 간결히.` },
+      { role: "system", content: `너는 다음 페르소나처럼 답변하는데, 페르소나에 있는 내용을 바탕으로, 구체적으로 대답하고, 오프라인 체험 및 모바일기기 사용에 관해서는 꼭 포함시켜: 이름:${p.name}, 역할:${p.role}, 성향:${p.traits}. 한글로 간결히.` },
       { role: "user", content: question || "질문이 없습니다." },
     ];
     const text = await openaiChat(messages);
@@ -143,7 +143,7 @@ app.post("/chat/group", async (req, res) => {
     // LIVE (OpenAI Responses API) — '이름: 발언' 형식으로 유도
     const roster = picks.map(p => `- ${p.name} (${p.role}) / 성향:${p.traits}`).join("\n");
     const sys =
-      `너는 모더레이터야. 아래 참여자들이 '${topic}'를 ${rounds} 라운드로 토론하도록 해, 토픽을 주제로 다루되, 오프라인 팝업방문 및 갤럭시 기능을 활용한 내용이 포함되도록 안내해 .\n` +
+      `너는 모더레이터야. 아래 참여자들이 '${topic}'를 ${rounds} 라운드로 토론하도록 해, 토픽을 주제로 다루되, 페르소나에 있는 내용을 꼭 기준으로 삼아서 오프라인 팝업방문 및 갤럭시 기능을 활용한 내용이 포함되도록 안내해 .\n` +
       `각 발언은 반드시 "이름: 내용" 형식으로 한 줄씩 출력해. 마지막엔 '요약:' 한 줄을 붙여.\n` +
       `참여자:\n${roster}\n(최근 컨텍스트 ${historyLimit}개 사용)`;
 
