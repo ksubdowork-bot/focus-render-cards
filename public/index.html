@@ -96,7 +96,7 @@
 <body>
   <div class="wrap">
     <h1>
-      AI 포커스 그룹
+      AI 익스피리언스 포커스 그룹 by Exeprience Design TF
       <span id="modeBadge" class="badge">DEMO</span>
       <div class="mode-toggle">
         <div class="pill">
@@ -250,7 +250,6 @@
           <div class="kebab">
             <button class="btn ghost" data-edit>편집</button>
             <button class="btn danger" data-del>삭제</button>
-            <span class="tag">클릭으로 선택</span>
           </div>
         `;
         // 클릭하면 솔로/그룹 선택 적용
@@ -285,7 +284,7 @@
     }
 
     function promptEditPersona(old){
-      const name = prompt("이름/별칭", old.name || "");
+      const name = prompt("이름", old.name || "");
       if(name===null) return null;
       const role = prompt("역할/직무", old.role || "");
       if(role===null) return null;
