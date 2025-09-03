@@ -165,57 +165,62 @@
     
 
     <!-- 2) 솔로 대화 -->
-    <section class="section" id="secSolo">
-      <div class="sec-title">2) 솔로 질문 </div>
-      <div class="row">
-        <div class="full">
-          <label>페르소나</label>
-          <select id="soloPersonaSelect"></select>
-        </div>
-        <div>
-          <label>대화 컨텍스트 반영</label>
-          <select id="soloLimit">
-            <option>10</option><option selected>20</option><option>30</option><option>50</option>
-          </select>
-        </div>
-        <div class="full">
-          <label>질문</label>
-          <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고싶을까?" />
-        </div>
-      </div>
-      <div class="btns">
-        <button class="btn primary" id="btnAskSolo">질문하기</button>
-      </div>
-      <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;"></div>
-    </section>
+<!-- 2) 솔로 대화 -->
+<section class="section" id="secSolo">
+  <div class="sec-title">2) 솔로 질문 </div>
+  <div class="row">
+    <div class="full">
+      <label>페르소나</label>
+      <select id="soloPersonaSelect"></select>
+    </div>
+    <div>
+      <label>대화 컨텍스트 반영</label>
+      <select id="soloLimit">
+        <option>10</option><option selected>20</option><option>30</option><option>50</option>
+      </select>
+    </div>
+    <div class="full">
+      <label>질문</label>
+      <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고싶을까?" />
+    </div>
+  </div>
+  <div class="btns">
+    <button class="btn primary" id="btnAskSolo">질문하기</button>
+  </div>
+  <!-- ✅ 하나만 남기고 aria 속성 추가 -->
+  <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
+</section>
+    
+ <!-- 3) 그룹 대화 -->
+<section class="section" id="secGroup">
+  <div class="sec-title">3) 그룹 대화(최대 5명)</div>
+  <div class="hint">아래 목록에서 페르소나를 선택하세요. 선택된 페르소나가 발언합니다.</div>
 
-    <!-- 3) 그룹 대화 -->
-    <section class="section" id="secGroup">
-      <div class="sec-title">3) 그룹 대화(최대 5명)</div>
-      <div class="hint">아래 목록에서 페르소나를 선택하세요. 선택된 페르소나가 발언합니다.</div>
+  <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;"></div>
 
-      <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;"></div>
+  <div class="row">
+    <div class="full">
+      <label>토픽 / 과제</label>
+      <input id="groupTopic" placeholder="예: 갤럭시 팝업스토어에 간다면 무엇을 제일먼저 보고싶을까?" />
+    </div>
+    <div>
+      <label>라운드 수(기본 2)</label>
+      <select id="groupRounds"><option>1</option><option selected>2</option><option>3</option></select>
+    </div>
+    <div>
+      <label>대화 컨텍스트 반영</label>
+      <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
+    </div>
+  </div>
 
-      <div class="row">
-        <div class="full">
-          <label>토픽 / 과제</label>
-          <input id="groupTopic" placeholder="예: 갤럭시 팝업스토어에 간다면 무엇을 제일먼저 보고싶을까?" />
-        </div>
-        <div>
-          <label>라운드 수(기본 2)</label>
-          <select id="groupRounds"><option>1</option><option selected>2</option><option>3</option></select>
-        </div>
-        <div>
-          <label>대화 컨텍스트 반영</label>
-          <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
-        </div>
-      </div>
+  <div class="btns">
+    <button class="btn success" id="btnStartGroup">그룹 대화 시작</button>
+  </div>
 
-      <div class="btns">
-        <button class="btn success" id="btnStartGroup">그룹 대화 시작</button>
-      </div>
-      <div id="groupAnswer" class="answer" style="margin-top:12px; display:none;"></div>
-    </section>
+  <!-- ✅ 하나만 남기고 aria 속성 추가 -->
+  <div id="groupAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
+</section>
+    
   </div>
  <footer style="
     bottom:0;
@@ -237,21 +242,18 @@
   <div class="consent-modal">
     <h2 class="consent-title">안내 및 동의</h2>
 <p class="consent-desc">
-BX AI Focus Group App 은 페르소나를 입력하거나, 미리 준비된 소비자 페르소나를 불러와
-AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
-
+BX AI Focus Group App 은 페르소나를 입력하거나, 미리 준비된 소비자 페르소나를 불러와 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
+본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다. 따라서 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
+  
 사용 방법:
-1) 프로젝트에 맞는 페르소나를 직접 입력하거나 2026 소비자 인사이트 페르소나를 선택합니다.
-2) 솔로 질문 또는 그룹 대화를 통해 원하는 주제로 AI 토론을 진행합니다.
+1) 프로젝트에 맞는 페르소나를 직접 입력하거나, 2026 소비자 인사이트 페르소나(리서치기관 정보 활용)를 선택합니다.
+2) 솔로 질문 또는 그룹 대화를 통해 원하는 주제로 AI 토론을 진행합니다. 주제/ 질문이 정확하고 구체적일 수록 좋은 인사이트를 얻을 수 있습니다.
 3) 대화 결과에서 프로젝트에 활용할 수 있는 인사이트를 얻습니다.
 
-본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다.  
-따라서 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
-
-타 이벤트/전시 관련 포커스 그룹 사용 문의는 Experience Design TF 로 연락 바랍니다.  
+본 앱의 ILP외 이벤트/전시 관련 AI 질문·응답·토론 사용 문의는 Experience Design TF 로 연락 바랍니다.  
 문의: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
 
-동의하시면 서비스를 계속 이용할 수 있습니다.
+긍정적인 마인드와 AI 활용에 동의하시면 서비스를 계속 이용할 수 있습니다.
 </p>
     <div class="consent-actions">
       <button id="consentReject" class="btn">취소</button>
@@ -260,6 +262,30 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
   </div>
 </div>
   <script>
+    // --- 로딩 말줄임표 애니메이션 ---
+const _loadingTimers = new WeakMap();
+
+/** el 안에 baseText + ... 를 0~3개 반복 표시 */
+function startEllipsis(el, baseText = "") {
+  stopEllipsis(el);
+  el.setAttribute("aria-busy", "true");   // ✅ 로딩 상태
+  let i = 0;
+  el.textContent = baseText;
+  const id = setInterval(() => {
+    i = (i + 1) % 4;
+    el.textContent = baseText + ".".repeat(i);
+  }, 400);
+  _loadingTimers.set(el, id);
+}
+
+function stopEllipsis(el) {
+  const id = _loadingTimers.get(el);
+  if (id) {
+    clearInterval(id);
+    _loadingTimers.delete(el);
+  }
+  el.removeAttribute("aria-busy");        // ✅ 로딩 종료
+}
     // -------- 상태 & 유틸
     const $ = sel => document.querySelector(sel);
     const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -304,7 +330,7 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
       list.forEach((p, idx) => {
         const el = document.createElement("div");
         el.className = "card";
-        el.innerHTML = `
+        el.innerHTML = 
           <div style="flex:1">
             <div class="name">${esc(p.name || "이름없음")}</div>
             <div class="meta">${esc(p.role || "")}</div>
@@ -314,7 +340,7 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
             <button class="btn ghost" data-edit>편집</button>
             <button class="btn danger" data-del>삭제</button>
           </div>
-        `;
+        ;
         // 클릭하면 솔로/그룹 선택 적용
         el.addEventListener("click", (e)=>{
           if(e.target.matches("[data-del]")) return; // 삭제버튼은 별도 처리
@@ -365,8 +391,8 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
       const list = loadPersonas();
       const sel = $("#soloPersonaSelect");
       const v = sel.value;
-      sel.innerHTML = list.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
-      if(list.length===0) sel.innerHTML = `<option value="" disabled selected>저장된 페르소나 없음</option>`;
+      sel.innerHTML = list.map(p => <option value="${esc(p.name)}">${esc(p.name)}</option>).join("");
+      if(list.length===0) sel.innerHTML = <option value="" disabled selected>저장된 페르소나 없음</option>;
       else if(v && list.some(p=>p.name===v)) sel.value = v;
       renderGroupPickArea();
     }
@@ -388,7 +414,7 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
         const chip = document.createElement("div");
         chip.className = "persona-pill";
         chip.dataset.name = p.name;
-        chip.innerHTML = `<div style="font-weight:700">${esc(p.name)}</div><div class="meta">${esc(p.role)}</div><div class="meta">${esc(p.traits)}</div>`;
+        chip.innerHTML = <div style="font-weight:700">${esc(p.name)}</div><div class="meta">${esc(p.role)}</div><div class="meta">${esc(p.traits)}</div>;
         chip.addEventListener("click", ()=> toggleGroupPerson(p.name));
         box.appendChild(chip);
       });
@@ -467,84 +493,96 @@ AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도�
       modeBadge.style.color = m==="live" ? "#15803d" : "#4252d9";
     }
 
-    // -------- 솔로 대화
-    $("#btnAskSolo").addEventListener("click", async ()=>{
-      const name = $("#soloPersonaSelect").value;
-      const q = $("#soloQuestion").value.trim();
-      const limit = parseInt($("#soloLimit").value,10) || 20;
-      if(!name) return toast("페르소나를 선택하세요.");
-      if(!q) return toast("질문을 적어주세요.");
-      const p = loadPersonas().find(x=>x.name===name);
-      if(!p) return toast("선택한 페르소나를 찾을 수 없습니다.");
+// -------- 솔로 대화
+$("#btnAskSolo").addEventListener("click", async ()=>{
+  const name = $("#soloPersonaSelect").value;
+  const q = $("#soloQuestion").value.trim();
+  const limit = parseInt($("#soloLimit").value,10) || 20;
+  if(!name) return toast("페르소나를 선택하세요.");
+  if(!q) return toast("질문을 적어주세요.");
+  const p = loadPersonas().find(x=>x.name===name);
+  if(!p) return toast("선택한 페르소나를 찾을 수 없습니다.");
 
-      const out = $("#soloAnswer");
-      out.style.display = "block";
-      if(currentMode()==="demo"){
-        out.textContent = `[DEMO] ${p.name}의 시점으로 답변합니다.\n\nQ. ${q}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
-        return;
-      }
-      // LIVE 호출
-      try{
-        out.textContent = "[LIVE] AI 응답 작성중...";
-        const res = await fetch("/chat/solo",{
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ persona:p, question:q, historyLimit:limit })
-        });
-        if(!res.ok){
-          const t = await res.text();
-          throw new Error(`HTTP ${res.status} - ${t}`);
-        }
-        const data = await res.json();
-        out.textContent = (data.answer||"").trim() || "(빈 응답)";
-      }catch(err){
-        out.textContent = `오류: ${err.message}`;
-      }
+  const out = $("#soloAnswer");
+  out.style.display = "block";
+
+  if(currentMode()==="demo"){
+    out.textContent = [DEMO] ${p.name}의 시점으로 답변합니다.\n\nQ. ${q}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.;
+    return;
+  }
+
+  try{
+    // ✅ 로딩 애니메이션 시작
+    startEllipsis(out, "[LIVE] AI 응답 작성중");
+
+    const res = await fetch("/chat/solo",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ persona:p, question:q, historyLimit:limit })
     });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error(HTTP ${res.status} - ${t});
+    }
+    const data = await res.json();
+    out.textContent = (data.answer||"").trim() || "(빈 응답)";
+  }catch(err){
+    out.textContent = 오류: ${err.message};
+  } finally {
+    // ✅ 로딩 애니메이션 정지
+    stopEllipsis(out);
+  }
+});
 
     // -------- 그룹 대화
-    $("#btnStartGroup").addEventListener("click", async ()=>{
-      const names = getGroupSelected();
-      const list = loadPersonas().filter(p=>names.includes(p.name));
-      if(list.length===0) return toast("그룹에 참여시킬 페르소나를 한 명 이상 선택하세요.");
-      const topic = $("#groupTopic").value.trim() || "자유 토론";
-      const rounds = parseInt($("#groupRounds").value,10) || 2;
-      const limit = parseInt($("#groupLimit").value,10) || 20;
+$("#btnStartGroup").addEventListener("click", async ()=>{
+  const names = getGroupSelected();
+  const list = loadPersonas().filter(p=>names.includes(p.name));
+  if(list.length===0) return toast("그룹에 참여시킬 페르소나를 한 명 이상 선택하세요.");
+  const topic = $("#groupTopic").value.trim() || "자유 토론";
+  const rounds = parseInt($("#groupRounds").value,10) || 2;
+  const limit = parseInt($("#groupLimit").value,10) || 20;
 
-      const out = $("#groupAnswer");
-      out.style.display = "block";
-      if(currentMode()==="demo"){
-        const heads = list.map(p=>p.name).join(", ");
-        out.textContent = `[DEMO] (${heads}) 라운드 ${rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
-        return;
-      }
-      // LIVE 호출
-      try{
-        out.textContent = "[LIVE] 그룹 대화 내용 기록중...";
-        const res = await fetch("/chat/group",{
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit })
-        });
-        if(!res.ok){
-          const t = await res.text();
-          throw new Error(`HTTP ${res.status} - ${t}`);
-        }
-        const data = await res.json();
+  const out = $("#groupAnswer");
+  out.style.display = "block";
 
-        // (수정) transcript 배열 + summary 지원
-        if (Array.isArray(data.transcript)) {
-          const lines = data.transcript.map(it => `${it.speaker}: ${it.text}`).join("\n");
-          const sum = data.summary ? `\n\n요약: ${data.summary}` : "";
-          out.textContent = `${lines}${sum}`;
-        } else {
-          // 서버가 문자열만 줄 때
-          out.textContent = (data.transcript || data.summary || "").trim() || "(빈 응답)";
-        }
-      }catch(err){
-        out.textContent = `오류: ${err.message}`;
-      }
+  if(currentMode()==="demo"){
+    const heads = list.map(p=>p.name).join(", ");
+    out.textContent = [DEMO] (${heads}) 라운드 ${rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.;
+    return;
+  }
+
+  // LIVE 호출
+  try{
+    // ✅ 로딩 애니메이션 시작
+    startEllipsis(out, "[LIVE] 그룹 대화 내용 기록중");
+
+    const res = await fetch("/chat/group",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit })
     });
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error(HTTP ${res.status} - ${t});
+    }
+    const data = await res.json();
+
+    // (수정) transcript 배열 + summary 지원
+    if (Array.isArray(data.transcript)) {
+      const lines = data.transcript.map(it => ${it.speaker}: ${it.text}).join("\n");
+      const sum = data.summary ? \n\n요약: ${data.summary} : "";
+      out.textContent = ${lines}${sum};
+    } else {
+      out.textContent = (data.transcript || data.summary || "").trim() || "(빈 응답)";
+    }
+  }catch(err){
+    out.textContent = 오류: ${err.message};
+  } finally {
+    // ✅ 로딩 애니메이션 정지 (성공/실패 모두)
+    stopEllipsis(out);
+  }
+});
 
     // -------- 저장/편집/삭제
     $("#btnSavePersona").addEventListener("click", ()=>{
