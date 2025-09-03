@@ -310,7 +310,7 @@ function stopEllipsis(el) {
 }
 
 // -------- 상태 & 유틸
-async function fetchWithTimeout(url, { timeout = 8000, ...opts } = {}) {
+async function fetchWithTimeout(url, { timeout = 10000, ...opts } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
@@ -368,7 +368,7 @@ function loadPersonas(){
   
 function addPersona(p){
   const arr = loadPersonas();
-  if(arr.length >= 5){ toast("최대 5명까지 저장할 수 있어요."); return false; }
+  if(arr.length >= 6){ toast("최대 6명까지 저장할 수 있어요."); return false; }
   arr.unshift(p); savePersonas(arr); return true;
 }
 function updatePersona(idx, p){
@@ -482,7 +482,7 @@ function toggleGroupPerson(name){
   let arr = getGroupSelected();
   if(arr.includes(name)) arr = arr.filter(x=>x!==name);
   else{
-    if(arr.length>=5){ toast("그룹은 최대 5명까지 선택 가능합니다."); return; }
+    if(arr.length>=6){ toast("그룹은 최대 6명까지 선택 가능합니다."); return; }
     arr.push(name);
   }
   setGroupSelected(arr);
@@ -500,9 +500,7 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-// 기존 loadSamplePersonas(triggerBtn) 통째로 교체
 async function loadSamplePersonas(triggerBtn){
-  // ② 최후 폴백(로컬 하드코드). 필요하면 네가 쓰던 샘플로 채워 넣기
   const localFallback = [
     // { name:"The Pioneers", role:"iPhone 16 Pro", traits:"...", bio:"..." },
     // …
@@ -523,7 +521,7 @@ async function loadSamplePersonas(triggerBtn){
     const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec";
     let items = null;
     try {
-      const r = await fetchWithTimeout(GAS_URL, { timeout: 7000 });
+      const r = await fetchWithTimeout(GAS_URL, { timeout: 10000 });
       if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
       const data = await r.json();
       if (data && data.ok && Array.isArray(data.items)) {
@@ -537,7 +535,7 @@ async function loadSamplePersonas(triggerBtn){
     // ── 2차: 서버 내장 페르소나 (/personas-list)
     if (!items) {
       try {
-        const r2 = await fetchWithTimeout("/personas-list", { timeout: 3000 });
+        const r2 = await fetchWithTimeout("/personas-list", { timeout: 8000 });
         if (!r2.ok) throw new Error(`SERVER HTTP ${r2.status}`);
         const data2 = await r2.json();
         if (data2 && data2.ok && Array.isArray(data2.items)) {
@@ -583,46 +581,7 @@ async function loadSamplePersonas(triggerBtn){
     setButtonLoading(triggerBtn, false);
   }
 }
-// ---------- 로컬 샘플 로드
-// async function loadSamplePersonas(){
-//  const fallback = [
-//  {name:"The Pioneers", role:"iPhone 16 Pro", traits:"Spontaneous, Risk-takers, Switching Modes", bio:"핵심 가치 : 새 아이디어·스마트 디자인에 강하게 이끌림, 디지털-피지컬의 유기적 연결을 탐구하되 일·삶 경계는 명확히 유지(워라벨) 새 기술이 생기면 늘 먼저 써보고, 내 방식에 얼마나 잘 녹아드는지가 기준. 유니버설 디자인·지속가능 제품에 실천적 관심(재사용·수선·모듈러 선호)  . 창업가적·충동적 시도, 모드 전환이 빠른 리스크테이커, Lifestyle : 뉴욕의 빠른 리듬 속에서  늘 “다음 아이디어를 내지 않으면 뒤처진다”는 긴장감을 안고 산다. 아침 7시, 세티스파이 브랜드 복장(서스테이너블 소재 및 러닝 전문 브랜딩) 으로 러닝 후 출근. 오전에는 팝업 전시 협업 미팅—로 실물 전시를  Vision Pro 앱에서 ‘프리뷰’해보고,  오후엔 프로토타입을 3D 프린트한 뒤 핸즈 온 테스트. 퇴근이 명확하지 않은 그는 저녁 8시 스스로 알림을 끊고 하루에 꼭 ‘디지털 오프라인 타임’을 지킨다. 저녁엔 ‘포커스 모드’를 켜 소셜 알림을 차단해 개인 시간을 지킨다(연결 추구와 경계 설정의 공존). 매달 마지막 주 금요일엔 중고 플랫폼에서 팀 장비를 순환 판매/구매해 폐기물 최소화. 변화가 끊이지 않는 뉴욕에 새로운 장소가 생길 때마다 어김없이 살펴보는 것도 루틴이다. 자기만의 리듬, 자기만의 기준이 분명한 사람이다, Device Habit : 	iPhone–iPad–Mac을 무선 연동해 스케치→프로토→AR 시연까지 끊김 없이 진행(디지털-피지컬 브리지를 스튜디오 밖 IRL로 확장). 사용 앱·단축어·포커스 모드가 생활 리듬에 맞춰 자동 전환(‘Switching Modes’의 일상화), 스케치 앱, 자동화 단축어, 노이즈 캔슬, 디바이스 간 전환 같은몰입 기능은 다 켜놓고 쓴다. AI 기능도, 그냥 말 걸어보는 게 아니라내가 쓰는 방식대로 반응하는지 본다.러닝시 심박/거리 체크, iOS에 최적화된 기본 업무 파이프라인, 자기만의 몰입 흐름, 장비 구성, 시간 감각을 해치지 않게 루틴화된 셋팅. 클라우드·에어드롭 기반 공유와 단축어 자동화가 핵심 생산성 자산. 갤럭시 전환 시 협업 속도·프로토타이핑이 느려져진다고 판단 “팀이 iOS 기반으로 맞춘 워크플로우를 바꾸면, 한 템포 늦는 순간 바로 경쟁에서 밀린다” 내가 원하는 몰입, 효율, 루틴을 깨지 않고 써왔기 때문에” iPhone을 고수"},
-//  {name:"The Reductionists", role:"갤럭시 Z Fold", traits:"Busy, Values-driven, Community-focused, Seeking connection", bio:"핵심 가치 : 뉴욕은 개인주의와 속도전의 도시지만, 지민은 바로 그 안에서 “사람과 사람의 따뜻한 연결”을 지켜내려 한다. 그녀의 요가 수업은 경쟁보다 호흡과 균형을 되찾는 공간으로, 도시의 소란과 불안을 잠시 잊게 한다. 회원들에게 필요한 건 화려한 서비스가 아니라 진정성 있는 돌봄이라고 믿는다, Lifestyle : 아침에는 회원들과 함께 하는 라이브 온라인 수업을 송출하고, 오후에는 오프라인 스튜디오에서 강의를 진행한다. 수업 중에는 회원들의 자세를 직접 교정하면서, 동시에 카메라로 촬영해 맞춤 피드백 영상을 제공한다. 수업 후에는 회원들과 Hudson 강변을 함께 걷고, 야외 클라스 운영, 운영과 동시에 촬영 및 소시얼 라이브 송출, 저녁에는 SNS용 숏폼 영상을 편집해 업로드하며 새로운 회원을 끌어들인다. 집에서는 반려묘(러시안블루)와 함꼐 지내며, 계정에도 고양이가 자연스럽게 등장하는 일상 컷을 공유, 전문성과 따듯한 라이프스타일 이미지를 동시에 강화, Device Habit : 촬영을 통한 회원들의 자세를 분석·교정 영상 제공, AI 편집으로 촬영 즉시 SNS용 콘텐츠 제작, AI 편집, 기기 내 편집등 도시적 속도에 대응, 어두운 스튜디오에서도 촬영 횟수 많음. 집에서는 고양이의 요가자세같은 순간을 포착하여 촬영, Lock-in : 전문가 모드 고화질 촬영으로 빠른 콘텐츠 경쟁 속에서도 돋보이는 퀄리티 보장, 수업분위기와 추구미에 따른 다양 한분위기에서 의 촬영 필요  “갤럭시의 AI 카메라와 고화질 촬영 없이는 내 온라인 수업과 홍보 콘텐츠의 전문성을 유지할 수 없다.”"}
-// ];
-//  try{
-//    const r = await fetch("/personas-list");
-//    if(!r.ok) throw new Error("server list failed");
-//    const data  = await r.json();
 
- //   const raw   = (data && data.ok && Array.isArray(data.items) && data.items.length)
-  //    ? data.items
-  //    : fallback;
-
-  //  const items = raw.map(normalizePersona);                 // ★
-  //  const cur   = loadPersonas().map(normalizePersona);      // ★
-
-  //  const merged = [...items, ...cur].reduce((acc,p)=>{
-  //    if(!acc.find(x=>x.name===p.name)){
-  //      acc.push({ name:p.name, role:p.role, traits:p.traits, bio:p.bio }); // 저장키 고정
- //     }
- //     return acc;
- //   }, []).slice(0,5);
-
- //   savePersonas(merged);
- //   renderPersonaList();
- // }catch(_){
-//    const cur = loadPersonas().map(normalizePersona);        // ★
-  //  const merged = [...fallback.map(normalizePersona), ...cur].reduce((acc,p)=>{
- //     if(!acc.find(x=>x.name===p.name)) acc.push({ name:p.name, role:p.role, traits:p.traits, bio:p.bio });
- //     return acc;
- //   }, []).slice(0,5);
-
-//    savePersonas(merged);
-//    renderPersonaList();
-//  }
-// }
-
-// -------- 모드 토글
 function currentMode(){ return modeLive.checked ? "live" : "demo"; }
 modeDemo.addEventListener("change", ()=> modeChanged());
 modeLive.addEventListener("change", ()=> modeChanged());
@@ -690,7 +649,7 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
   }
 
   try{
-    startEllipsis(out, "[LIVE] 그룹 대화 내용 기록중");
+    startEllipsis(out, "[LIVE] 뒤에서 몰래 이야기중");
     const res = await fetch("/chat/group",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
