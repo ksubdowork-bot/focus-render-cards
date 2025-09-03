@@ -22,7 +22,28 @@
       --shadow-sm:0 6px 18px rgba(41,53,108,.08);
       --chip:#f2f4f7;
     }
+/* --- Consent Gate (splash) --- */
+.consent-backdrop{
+  position:fixed; inset:0; background:rgba(17,24,39,.6);
+  display:flex; align-items:center; justify-content:center; z-index:9999;
+}
+.consent-modal{
+  width:min(680px, 92vw);
+  background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25);
+  padding:22px;
+}
+.consent-title{font-size:18px; font-weight:800; margin:0 0 8px}
+.consent-desc{font-size:14px; color:#4b5563; white-space:pre-wrap; line-height:1.6}
+.consent-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
+/* 앱 잠금 */
+.app-disabled{ filter:blur(1px); pointer-events:none; user-select:none; }
+
+/* (선택) 모달 안의 기본 버튼 컬러가 그라데이션에 덮이지 않도록 */
+.consent-modal .btn.primary{ background:var(--brand); color:#fff }
+    
     *{box-sizing:border-box}
+
+    
     body{
       margin:0; background:var(--bg); color:var(--ink);
       font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Malgun Gothic,sans-serif;
@@ -94,6 +115,7 @@
   </style>
 </head>
 <body>
+    <div id="appRoot" class="app-disabled">
   <div class="wrap">
     <h1>
       AI 익스피리언스 포커스 그룹
@@ -206,9 +228,26 @@
     padding:8px 0;
     border-top:1px solid #e5e7eb;
   ">
-    Experience Deign TF · All rights reserved. · Contact: k.do@cheil.com
-  </footer>
+      Experience Design TF · All rights reserved. · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
+</footer>
+</div> <!-- ✅ appRoot 닫기 -->
 
+<!-- ✅ 동의(Consent) 모달 -->
+<div id="consentGate" class="consent-backdrop" role="dialog" aria-modal="true">
+  <div class="consent-modal">
+    <h2 class="consent-title">안내 및 동의</h2>
+    <p class="consent-desc">
+BX AI Focus Group App은 무선 ILP에 특화된 내용이 AI 모더레이터에게 학습되어 있습니다.
+따라서 타 이벤트/전시 관련 사용 문의는 Experience Design TF로 문의 바랍니다. Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
+
+동의하시면 서비스를 계속 이용할 수 있습니다.
+    </p>
+    <div class="consent-actions">
+      <button id="consentReject" class="btn">취소</button>
+      <button id="consentAccept" class="btn primary">동의</button>
+    </div>
+  </div>
+</div>
   <script>
     // -------- 상태 & 유틸
     const $ = sel => document.querySelector(sel);
@@ -513,9 +552,35 @@
     $("#btnLoadSamples").addEventListener("click", loadSamplePersonas);
     $("#btnRefreshList").addEventListener("click", renderPersonaList);
 
-    // 초기화
-    modeChanged();
-    renderPersonaList();
-  </script>
+  // 초기화
+  modeChanged();
+  renderPersonaList();
+
+  /* ---------- Consent Gate (항상 표시) ---------- */
+  (function consentGate(){
+    const gate = document.getElementById('consentGate');
+    const app  = document.getElementById('appRoot');
+
+    function openGate(){
+      if (gate) gate.style.display = 'flex';
+      app?.classList.add('app-disabled');
+    }
+    function closeGate(){
+      if (gate) gate.style.display = 'none';
+      app?.classList.remove('app-disabled');
+    }
+
+    // 페이지 열릴 때마다 항상 모달 오픈
+    openGate();
+
+    document.getElementById('consentAccept')?.addEventListener('click', () => {
+      closeGate(); // 동의 시 닫기
+    });
+    document.getElementById('consentReject')?.addEventListener('click', () => {
+      // 거절 시 계속 유지 (원하면 리다이렉트 가능)
+      openGate();
+    });
+  })();
+</script>
 </body>
 </html>
