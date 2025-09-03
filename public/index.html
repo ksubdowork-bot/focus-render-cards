@@ -261,6 +261,12 @@ BX AI Focus Group App 은 페르소나를 입력하거나, 미리 준비된 소�
   </div>
 </div>
 <script>
+  function savePersonas(arr){
+  const slim = arr.slice(0,5).map(p => ({
+    name:p.name, role:p.role, traits:p.traits, bio:p.bio   // ✅ description 저장 안 함
+  }));
+  localStorage.setItem(LSK, JSON.stringify(slim));
+}
   function normalizePersona(p){
   return {
     ...p,
