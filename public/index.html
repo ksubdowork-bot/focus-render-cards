@@ -527,7 +527,7 @@ async function loadSamplePersonas(
     setButtonLoading(triggerBtn, true, "불러오는 중");
 
     // ---- 1) GAS (강제 옵션 & 캐시 무효화)
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec" + Date.now();
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec?t=" + Date.now();   
     let items = null;
 
     const wantGAS = (force === "GAS" || force === null);
@@ -739,12 +739,19 @@ $("#btnSavePersona").addEventListener("click", ()=>{
 // 수정 취소
 $("#btnCancelEdit").addEventListener("click", exitEditMode);
 $("#btnLoadSamples").addEventListener("click", (e)=>{
-  loadSamplePersonas(e.currentTarget, { replace:true });
+  // 원격이 오면 교체, 반드시 GAS 먼저/전용으로 시도
+  loadSamplePersonas(e.currentTarget, {
+    replace: true,
+    timeoutGAS: 12000,
+    timeoutLocal: 5000,
+    force: "GAS"   // ← 이걸로 강제
+  });
 });
   $("#btnRefreshList").addEventListener("click", renderPersonaList);
 
 // 초기화
 modeChanged();
+  localStorage.removeItem(LSK);
 renderPersonaList();
 
 /* ---------- Consent Gate (단일, 견고 버전) ---------- */
