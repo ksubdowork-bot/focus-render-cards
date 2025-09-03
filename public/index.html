@@ -310,6 +310,14 @@ function stopEllipsis(el) {
 }
 
 // -------- 상태 & 유틸
+  async function fetchWithTimeout(url, { timeout = 8000, ...opts } = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const modeBadge = $("#modeBadge");
@@ -491,39 +499,87 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
+// 기존 loadSamplePersonas(triggerBtn) 통째로 교체
 async function loadSamplePersonas(triggerBtn){
-  const fallback = [ /* 네가 쓰던 샘플들 */ ];
+  // ② 최후 폴백(로컬 하드코드). 필요하면 네가 쓰던 샘플로 채워 넣기
+  const localFallback = [
+    // { name:"The Pioneers", role:"iPhone 16 Pro", traits:"...", bio:"..." },
+    // …
+  ];
+
+  // ① 서버(personas-list) 응답을 items 포맷으로 변환
+  const mapToItem = (p) => ({
+    name: p.name || "",
+    role: p.role || "",
+    traits: p.traits || "",
+    bio: (p.bio ?? p.description ?? "")
+  });
 
   try {
-    setButtonLoading(triggerBtn, true, "불러오는 중");  // ← 시작!
+    setButtonLoading(triggerBtn, true, "불러오는 중");
 
-    const url = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec";
-    const r = await fetch(url);
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    const items = (data && data.ok && Array.isArray(data.items)) ? data.items : fallback;
+    // ── 1차: Google Apps Script (타임아웃 적용)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec";
+    let items = null;
+    try {
+      const r = await fetchWithTimeout(GAS_URL, { timeout: 7000 });
+      if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
+      const data = await r.json();
+      if (data && data.ok && Array.isArray(data.items)) {
+        items = data.items.map(mapToItem);
+      }
+    } catch (err) {
+      // 타임아웃/에러 시 다음 단계로
+      console.warn("GAS fetch fallback:", err?.message || err);
+    }
 
-    const cur = loadPersonas();
-    const merged = [...items, ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push({name:p.name, role:p.role, traits:p.traits, bio:p.bio});
+    // ── 2차: 서버 내장 페르소나 (/personas-list)
+    if (!items) {
+      try {
+        const r2 = await fetchWithTimeout("/personas-list", { timeout: 3000 });
+        if (!r2.ok) throw new Error(`SERVER HTTP ${r2.status}`);
+        const data2 = await r2.json();
+        if (data2 && data2.ok && Array.isArray(data2.items)) {
+          items = data2.items.map(mapToItem);
+        }
+      } catch (err2) {
+        console.warn("server personas fallback:", err2?.message || err2);
+      }
+    }
+
+    // ── 3차: 로컬 하드코드
+    if (!items || !items.length) {
+      items = localFallback.map(mapToItem);
+    }
+
+    // 현재 저장과 병합(중복 이름 방지, 최대 5명)
+    const cur = loadPersonas().map(mapToItem);
+    const merged = [...items, ...cur].reduce((acc, p) => {
+      if (!acc.find(x => x.name === p.name)) acc.push(p);
       return acc;
-    }, []).slice(0,5);
+    }, []).slice(0, 5);
 
     savePersonas(merged);
     renderPersonaList();
-    toast("자동 입력 완료!");
+
+    const sourceMsg = (items === localFallback) 
+      ? "서버 응답이 느려서 로컬 샘플로 채웠어요."
+      : (cur.length ? "자동 입력 완료! (기존과 병합)" : "자동 입력 완료!");
+    toast(sourceMsg);
+
   } catch (e) {
     console.error(e);
+    // 어떤 이유로든 실패했다면 최후 폴백
     const cur = loadPersonas();
-    const merged = [...fallback, ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push(p);
+    const merged = [...localFallback, ...cur].reduce((acc,p)=>{
+      if(!acc.find(x=>x.name===p.name)) acc.push(mapToItem(p));
       return acc;
     }, []).slice(0,5);
     savePersonas(merged);
     renderPersonaList();
-    toast("서버 응답이 느려서 로컬 샘플로 채웠어요.");
+    toast("네트워크 지연으로 로컬 샘플로 채웠어요.");
   } finally {
-    setButtonLoading(triggerBtn, false); // ← 종료!
+    setButtonLoading(triggerBtn, false);
   }
 }
 // ---------- 로컬 샘플 로드
