@@ -574,14 +574,15 @@ modeChanged();
 renderPersonaList();
 
 /* ---------- Consent Gate (단일, 견고 버전) ---------- */
+/* ---------- Consent Gate (단일) ---------- */
 (function () {
   function ready(fn){
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
     else fn();
   }
   ready(() => {
-    const gate = document.getElementById('consentGate');
-    const app  = document.getElementById('appRoot');
+    const gate  = document.getElementById('consentGate');
+    const app   = document.getElementById('appRoot');
     const btnOk = document.getElementById('consentAccept');
     const btnNo = document.getElementById('consentReject');
     if (!gate || !app || !btnOk || !btnNo) return;
@@ -591,13 +592,19 @@ renderPersonaList();
     btnNo.addEventListener('click', openGate,  { passive: true });
 
     function openGate(){
+      // 화면/접근성/포인터 모두 "열림" 상태로
       gate.hidden = false;
-      gate.removeAttribute('inert');       // (선택) 포커스 허용
+      gate.style.display = 'flex';      // ✅ 확실히 보이도록
+      gate.removeAttribute('aria-hidden');
+      gate.removeAttribute('inert');
       app.classList.add('app-disabled');
     }
     function closeGate(){
+      // 화면/접근성/포인터 모두 "닫힘" 상태로
       gate.hidden = true;
-      gate.setAttribute('inert','');       // (선택) 숨긴 뒤 포커스 차단
+      gate.style.display = 'none';      // ✅ 눈에 보이는 잔상 제거 (Safari 등 대응)
+      gate.setAttribute('aria-hidden','true');
+      gate.setAttribute('inert','');
       app.classList.remove('app-disabled');
     }
   });
