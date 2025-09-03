@@ -527,7 +527,7 @@ async function loadSamplePersonas(
     setButtonLoading(triggerBtn, true, "불러오는 중");
 
     // ---- 1) GAS (강제 옵션 & 캐시 무효화)
-    const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec?t=" + Date.now();
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec" + Date.now();
     let items = null;
 
     const wantGAS = (force === "GAS" || force === null);
