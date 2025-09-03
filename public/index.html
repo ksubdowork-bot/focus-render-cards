@@ -500,80 +500,69 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-async function loadSamplePersonas(
-  triggerBtn,
-  { timeoutGAS=9000, timeoutLocal=4000, replace=true, force=null } = {}
-) {
-  // 최후 폴백(하드코드)
-  const localFallback = [
-    // { name:"The Pioneers", role:"iPhone 16 Pro", traits:"...", bio:"..." },
-  ];
+// --- 구글 시트 전용 로더 (GAS only) ---
+async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true } = {}) {
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec?t=" + Date.now();
 
   const mapToItem = (p) => ({
-    name: p?.name || "",
-    role: p?.role || "",
-    traits: p?.traits || "",
+    name:  p?.name  || "",
+    role:  p?.role  || "",
+    traits:p?.traits|| "",
     bio:   p?.bio ?? p?.description ?? ""
   });
 
-  // replace 모드면 잠깐 리스트 비워서 "로컬이 먼저 보임" 착시 제거
-  if (replace) {
-    savePersonas([]);
-    renderPersonaList();
-  }
+  // 응답이 진짜 JSON인지 보증
+  const mustJson = async (res) => {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (!ct.includes("application/json")) {
+      const preview = (await res.text()).slice(0, 160);
+      throw new Error(`GAS non-JSON. ct=${ct} preview="${preview}"`);
+    }
+    return res.json();
+  };
 
-  let source = "localFallback";
   try {
-    setButtonLoading(triggerBtn, true, "불러오는 중");
+    setButtonLoading(triggerBtn, true, "구글에서 불러오는 중");
 
-    // ---- 1) GAS (강제 옵션 & 캐시 무효화)
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec?t=" + Date.now();   
-    let items = null;
+    const r = await fetchWithTimeout(GAS_URL, {
+      timeout: timeoutGAS,
+      cache: "no-store",
+      headers: { "pragma": "no-cache", "cache-control": "no-cache" }
+    });
+    if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
 
-    const wantGAS = (force === "GAS" || force === null);
-    if (wantGAS) {
-      try {
-        const r = await fetchWithTimeout(GAS_URL, {
-          timeout: timeoutGAS,
-          cache: "no-store",
-          headers: { "pragma":"no-cache", "cache-control":"no-cache" }
-        });
-        if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
-        const data = await r.json();
-        if (data?.ok && Array.isArray(data.items) && data.items.length) {
-          items = data.items.map(mapToItem);
-          source = "GAS";
-        } else if (force === "GAS") {
-          throw new Error("GAS returned empty or ok:false");
-        }
-      } catch (err) {
-        console.warn("[GAS fallback]", err?.message || err);
-        if (force === "GAS") throw err; // 강제 모드면 바로 실패
-      }
+    const data = await mustJson(r);
+    if (!(data?.ok && Array.isArray(data.items) && data.items.length)) {
+      throw new Error("GAS ok:false 또는 items 비어있음");
     }
 
-    // ---- 2) 서버(personas-list)
-    const wantServer = (force === "server" || (force === null && !items));
-    if (wantServer) {
-      try {
-        const r2 = await fetchWithTimeout("/personas-list?t="+Date.now(), {
-          timeout: timeoutLocal,
-          cache: "no-store",
-          headers: { "pragma":"no-cache", "cache-control":"no-cache" }
-        });
-        if (!r2.ok) throw new Error(`SERVER HTTP ${r2.status}`);
-        const data2 = await r2.json();
-        if (data2?.ok && Array.isArray(data2.items) && data2.items.length) {
-          items = data2.items.map(mapToItem);
-          source = "server";
-        } else if (force === "server") {
-          throw new Error("server returned empty");
-        }
-      } catch (err2) {
-        console.warn("[server fallback]", err2?.message || err2);
-        if (force === "server") throw err2; // 강제 모드면 바로 실패
-      }
-    }
+    const items = data.items.map(mapToItem);
+
+    // 저장: replace면 교체, 아니면 병합(이름 중복 제거)
+    const cur = loadPersonas().map(mapToItem);
+    const finalList = (replace)
+      ? items.slice(0, 5)
+      : [...items, ...cur].reduce((acc, p) => {
+          if (!acc.find(x => x.name === p.name)) acc.push(p);
+          return acc;
+        }, []).slice(0, 5);
+
+    savePersonas(finalList);
+    renderPersonaList();
+
+    toast("불러오기 성공." + (replace ? " (기존 교체)" : " (병합)"));
+    console.log("[GAS only] loaded:", finalList);
+
+  } catch (err) {
+    console.error("[GAS only error]", err);
+    // 실패 시: 아무 것도 건드리지 않음(로컬 유지)
+    toast("불러오기에 실패했어요. 관리자에게 문의하세요");
+  } finally {
+    setButtonLoading(triggerBtn, false);
+  }
+}
+
+  
 
     // ---- 3) 로컬 하드코드
     if (!items || !items.length) {
