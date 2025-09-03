@@ -518,8 +518,7 @@ function updateGroupSelectedStyles(){
   // 구글샘플로드
 // 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
 async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true } = {}) {
-const GAS_URL =
-  "https://script.google.com/macros/s/AKfycbzlJ9j5N6EQyY-oxnB1nQHZl0c6i7LI350AdW-eS-tJgBKGaRCPEJTZzYr2mONr5vQp/exec?t=" + Date.now();
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzlJ9j5N6EQyY-oxnB1nQHZl0c6i7LI350AdW-eS-tJgBKGaRCPEJTZzYr2mONr5vQp/exec?t=" + Date.now();
   const mapToItem = (p) => ({
     name:   p?.name   || "",
     role:   p?.role   || "",
