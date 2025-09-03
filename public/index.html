@@ -261,18 +261,16 @@ BX AI Focus Group App 은 페르소나를 입력하거나, 미리 준비된 소�
   </div>
 </div>
 <script>
-  function savePersonas(arr){
+function savePersonas(arr){
   const slim = arr.slice(0,5).map(p => ({
-    name:p.name, role:p.role, traits:p.traits, bio:p.bio   // ✅ description 저장 안 함
+    name:p.name,
+    role:p.role,
+    traits:p.traits,
+    bio:p.bio          // description 저장 안 함
   }));
   localStorage.setItem(LSK, JSON.stringify(slim));
 }
-  function normalizePersona(p){
-  return {
-    ...p,
-    bio: (p.bio ?? p.description ?? "")
-  };
-}
+  
 // --- 로딩 말줄임표 애니메이션 ---
 const _loadingTimers = new WeakMap();
 
@@ -327,15 +325,24 @@ function exitEditMode(){
   $("#btnSavePersona").textContent = "페르소나 저장";
   $("#btnCancelEdit").style.display = "none";
 }
+  function normalizePersona(p){
+  return {
+    ...p,
+    // 서버/샘플에서 description으로 올 수도 있으니 bio로 흡수
+    bio: (p && (p.bio ?? p.description ?? "")),
+  };
+}
 function toast(msg){ alert(msg); }
 
 function loadPersonas(){
   try{
     const arr = JSON.parse(localStorage.getItem(LSK) || "[]");
-    return Array.isArray(arr) ? arr : [];
-  }catch(_){return [];}
+    const list = Array.isArray(arr) ? arr : [];
+    // description만 있는 경우 bio로 매핑
+    return list.map(normalizePersona);
+  }catch(_){ return []; }
 }
-function savePersonas(arr){ localStorage.setItem(LSK, JSON.stringify(arr.slice(0,5))); }
+  
 function addPersona(p){
   const arr = loadPersonas();
   if(arr.length >= 5){ toast("최대 5명까지 저장할 수 있어요."); return false; }
@@ -479,21 +486,33 @@ async function loadSamplePersonas(){
   try{
     const r = await fetch("/personas-list");
     if(!r.ok) throw new Error("server list failed");
-    const data = await r.json();
-    const items = (data && data.ok && Array.isArray(data.items) && data.items.length) ? data.items : fallback;
-    const cur = loadPersonas();
+    const data  = await r.json();
+
+    const raw   = (data && data.ok && Array.isArray(data.items) && data.items.length)
+      ? data.items
+      : fallback;
+
+    const items = raw.map(normalizePersona);                 // ★
+    const cur   = loadPersonas().map(normalizePersona);      // ★
+
     const merged = [...items, ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push({name:p.name, role:p.role, traits:p.traits, bio:p.bio});
+      if(!acc.find(x=>x.name===p.name)){
+        acc.push({ name:p.name, role:p.role, traits:p.traits, bio:p.bio }); // 저장키 고정
+      }
       return acc;
     }, []).slice(0,5);
-    savePersonas(merged); renderPersonaList();
+
+    savePersonas(merged);
+    renderPersonaList();
   }catch(_){
-    const cur = loadPersonas();
-    const merged = [...fallback, ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push(p);
+    const cur = loadPersonas().map(normalizePersona);        // ★
+    const merged = [...fallback.map(normalizePersona), ...cur].reduce((acc,p)=>{
+      if(!acc.find(x=>x.name===p.name)) acc.push({ name:p.name, role:p.role, traits:p.traits, bio:p.bio });
       return acc;
     }, []).slice(0,5);
-    savePersonas(merged); renderPersonaList();
+
+    savePersonas(merged);
+    renderPersonaList();
   }
 }
 
