@@ -592,6 +592,16 @@ renderPersonaList();
 
     function openGate(){ gate.hidden = false; app.classList.add('app-disabled'); }
     function closeGate(){ gate.hidden = true;  app.classList.remove('app-disabled'); }
+    function closeGate(){
+  gate.hidden = true;
+  gate.setAttribute('inert','');      // ← 추가(선택) : 모달 숨긴 뒤 포커스 차단
+  app.classList.remove('app-disabled');
+}
+function openGate(){
+  gate.hidden = false;
+  gate.removeAttribute('inert');      // ← 추가(선택)
+  app.classList.add('app-disabled');
+}
   });
 })();
 </script>
