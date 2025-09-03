@@ -310,7 +310,7 @@ function stopEllipsis(el) {
 }
 
 // -------- 상태 & 유틸
-  async function fetchWithTimeout(url, { timeout = 8000, ...opts } = {}) {
+async function fetchWithTimeout(url, { timeout = 8000, ...opts } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
@@ -318,6 +318,7 @@ function stopEllipsis(el) {
   } finally {
     clearTimeout(timer);
   }
+} 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const modeBadge = $("#modeBadge");
