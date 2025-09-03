@@ -500,83 +500,95 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-async function loadSamplePersonas(triggerBtn){
+async function loadSamplePersonas(triggerBtn, { timeoutGAS=9000, timeoutLocal=4000, replace=true } = {}) {
+  // 최후 폴백(하드코드)
   const localFallback = [
     // { name:"The Pioneers", role:"iPhone 16 Pro", traits:"...", bio:"..." },
-    // …
   ];
 
-  // ① 서버(personas-list) 응답을 items 포맷으로 변환
   const mapToItem = (p) => ({
-    name: p.name || "",
-    role: p.role || "",
-    traits: p.traits || "",
-    bio: (p.bio ?? p.description ?? "")
+    name: p?.name || "",
+    role: p?.role || "",
+    traits: p?.traits || "",
+    bio:   p?.bio ?? p?.description ?? ""
   });
 
+  let source = "localFallback";
   try {
     setButtonLoading(triggerBtn, true, "불러오는 중");
 
-    // ── 1차: Google Apps Script (타임아웃 적용)
-    const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec";
+    // 1) GAS (캐시버스터 붙임)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec?t=" + Date.now();
     let items = null;
     try {
-      const r = await fetchWithTimeout(GAS_URL, { timeout: 10000 });
+      const r = await fetchWithTimeout(GAS_URL, { timeout: timeoutGAS });
       if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
       const data = await r.json();
-      if (data && data.ok && Array.isArray(data.items)) {
+      if (data?.ok && Array.isArray(data.items) && data.items.length) {
         items = data.items.map(mapToItem);
+        source = "GAS";
       }
     } catch (err) {
-      // 타임아웃/에러 시 다음 단계로
       console.warn("GAS fetch fallback:", err?.message || err);
     }
 
-    // ── 2차: 서버 내장 페르소나 (/personas-list)
+    // 2) 서버(personas-list)
     if (!items) {
       try {
-        const r2 = await fetchWithTimeout("/personas-list", { timeout: 8000 });
+        // 같은 오리진에서 서버가 떠 있어야 성공합니다.
+        const r2 = await fetchWithTimeout("/personas-list?t=" + Date.now(), { timeout: timeoutLocal });
         if (!r2.ok) throw new Error(`SERVER HTTP ${r2.status}`);
         const data2 = await r2.json();
-        if (data2 && data2.ok && Array.isArray(data2.items)) {
+        if (data2?.ok && Array.isArray(data2.items) && data2.items.length) {
           items = data2.items.map(mapToItem);
+          source = "server";
         }
       } catch (err2) {
         console.warn("server personas fallback:", err2?.message || err2);
       }
     }
 
-    // ── 3차: 로컬 하드코드
+    // 3) 로컬 하드코드
     if (!items || !items.length) {
       items = localFallback.map(mapToItem);
+      source = "localFallback";
     }
 
-    // 현재 저장과 병합(중복 이름 방지, 최대 5명)
+    // 저장 방식: replace=true면 '원격 성공 시 덮어쓰기', false면 병합
     const cur = loadPersonas().map(mapToItem);
-    const merged = [...items, ...cur].reduce((acc, p) => {
-      if (!acc.find(x => x.name === p.name)) acc.push(p);
-      return acc;
-    }, []).slice(0, 5);
+    let finalList;
+    if (replace && (source === "GAS" || source === "server")) {
+      finalList = items.slice(0, 5);   // 원격이 오면 교체
+    } else {
+      // 병합(이름 중복 제거)
+      finalList = [...items, ...cur].reduce((acc, p) => {
+        if (!acc.find(x => x.name === p.name)) acc.push(p);
+        return acc;
+      }, []).slice(0, 5);
+    }
 
-    savePersonas(merged);
+    savePersonas(finalList);
     renderPersonaList();
 
-    const sourceMsg = (items === localFallback) 
-      ? "서버 응답이 느려서 로컬 샘플로 채웠어요."
-      : (cur.length ? "자동 입력 완료! (기존과 병합)" : "자동 입력 완료!");
-    toast(sourceMsg);
+    const msgMap = {
+      GAS: "최신 트렌드 페르소나를 불러왔어요.",
+      server: "페르소나를 불러왔어요.",
+      localFallback: "샘플로 채웠어요."
+    };
+    toast(msgMap[source] + (replace ? " (기존 항목 교체)" : " (기존과 병합)"));
+    console.log("[personas source]:", source, finalList);
 
   } catch (e) {
     console.error(e);
-    // 어떤 이유로든 실패했다면 최후 폴백
-    const cur = loadPersonas();
-    const merged = [...localFallback, ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push(mapToItem(p));
+    // 최후 폴백
+    const cur = loadPersonas().map(mapToItem);
+    const merged = [...localFallback.map(mapToItem), ...cur].reduce((acc,p)=>{
+      if(!acc.find(x=>x.name===p.name)) acc.push(p);
       return acc;
     }, []).slice(0,5);
     savePersonas(merged);
     renderPersonaList();
-    toast("네트워크 지연으로 로컬 샘플로 채웠어요.");
+    toast("오프라인 상태로 로컬 샘플로 채웠어요.");
   } finally {
     setButtonLoading(triggerBtn, false);
   }
@@ -697,8 +709,11 @@ $("#btnSavePersona").addEventListener("click", ()=>{
 
 // 수정 취소
 $("#btnCancelEdit").addEventListener("click", exitEditMode);
-$("#btnLoadSamples").addEventListener("click", (e)=> loadSamplePersonas(e.currentTarget));
-$("#btnRefreshList").addEventListener("click", renderPersonaList);
+$("#btnLoadSamples").addEventListener("click", (e)=> {
+  const replace = true;                  // ← 원격 성공 시 로컬을 '덮어쓰기'
+  loadSamplePersonas(e.currentTarget, { replace });
+});
+  $("#btnRefreshList").addEventListener("click", renderPersonaList);
 
 // 초기화
 modeChanged();
