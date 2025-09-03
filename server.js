@@ -104,7 +104,7 @@ app.post("/chat/solo", async (req, res) => {
     const messages = [
       { role: "system", content: 
         
-        `너는 반드시 다음 페르소나처럼 답변하는데, 페르소나에 있는 내용을 다시 언급하면서 구체적으로 질문에 대답하고, 대답 마지막 문장에는 페르소나에 저장된 내용을 바탕으로, 질문 맥락에 맞는 대답을 작성하되, 삼성갤럭시 오프라인 팝업에 쓸 수 있는 인사이트를 추출해서 간결하게 추가해줘.
+        `너는 반드시 다음 페르소나처럼 답변하는데, 페르소나에 있는 내용을 다시 언급하면서 구체적으로 질문에 대답하고, 대답 마지막 문장에는 페르소나에 저장된 내용을 바탕으로, 질문 맥락에 맞는 대답을 작성해줘, 페르소나가 연상될 수 있도록 최대한 자세히 대답해줘 삼성갤럭시 오프라인 팝업에 쓸 수 있는 인사이트를 추출해서 간결하게 추가해줘.
 
 
 
@@ -147,35 +147,53 @@ app.post("/chat/group", async (req, res) => {
       });
     }
 
-    // LIVE (OpenAI Responses API) — '이름: 발언' 형식으로 유도
+    // LIVE — '이름: 발언' 형식 + 마지막 줄 '요약: ...' 강제
     const roster = picks.map(p => `- ${p.name} (${p.role}) / 성향:${p.traits}`).join("\n");
     const sys =
-     
-      
-      `너는 모더레이터야. 아래 참여자들이 '${topic}'를 ${rounds} 라운드로 토론하도록 해,
-      토픽을 주제로 다루되, 페르소나에 있는 내용을 꼭 기준으로 삼아서 오프라인 팝업방문 및 오프라인 체험 및 모바일기기 사용에 관해서는 꼭 포함시켜,
-      체험 요소로는 카메라촬영, AI를 활용한 체험, 로컬 아티스트 또는 각종 커뮤니티를 활용한 워크샵등이 있을 수 있어 갤럭시 25의 기능을 먼저 숙지하고 대답과 연관지어서 작성해줘
-      마지막에는 모더레이터로서 요약해주고 삼성갤럭시 오프라인 팝업에 쓸 수 있는 인사이트를 3개 추출해서 간결하게 추가해줘.
-      
-      
-      \n` +
-      `각 발언은 반드시 "이름: 내용" 형식으로 한 줄씩 출력해. 마지막엔 '요약' 한 줄을 붙여.\n` +
-      `참여자:\n${roster}\n(최근 컨텍스트 ${historyLimit}개 사용)`;
+      `너는 모더레이터야. 아래 참여자들이 '${topic}'를 ${rounds} 라운드로 토론하도록 해.
+       오프닝 멘트를 꼭 해주고, 오프라인과 연계해서 토론이 진행될 수 있도록 질문을 다시 정리하고 시작해.
+       토론은 토픽을 주제로 다루되, 페르소나에 있는 내용을 기준으로 오프라인 팝업 방문/오프라인 체험/모바일기기 사용을 반드시 포함해.
+       체험 요소 예: 카메라 촬영, AI 활용 체험, 로컬 아티스트/커뮤니티 워크숍 등. 갤럭시 25의 기능과 적극 연관지어.
+       마지막에는 모더레이터로서 토론 요점을 한 줄로 요약하고, 삼성갤럭시 오프라인 팝업에 쓸 수 있는 인사이트 3가지를 간결히 추가해.
+
+       출력 형식 규칙:
+       1) 모든 발언은 반드시 "이름: 내용" 한 줄 형식으로만.
+       2) 마지막 '한 줄'은 오직 "요약: ..."으로 시작하는 라인만 출력(사람 이름/접두사 금지).`
+      + `\n참여자:\n${roster}\n(최근 컨텍스트 ${historyLimit}개 사용)`;
 
     const text = await openaiChat([
       { role: "system", content: sys },
       { role: "user", content: "토론을 시작해." },
     ]);
 
+    // 파싱
     const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const transcript = [];
     let summary = "";
+
     for (const line of lines) {
-      const m = line.match(/^([^:]{1,40}):\s*(.+)$/);
-      if (m) transcript.push({ speaker: m[1], text: m[2] });
-      if (/^요약\s*:/.test(line)) summary = line.replace(/^요약\s*:\s*/,"");
+      // 요약 라인 감지(한글/영문 둘 다 허용). '모더레이터: 요약: ...'처럼 앞에 말머리가 있어도 캡처됨.
+      const sumMatch =
+        line.match(/요약\s*:\s*(.+)$/i) ||
+        line.match(/summary\s*:\s*(.+)$/i);
+      if (sumMatch && !summary) {
+        summary = sumMatch[1].trim();
+        continue; // 요약 라인은 transcript에 넣지 않음
+      }
+
+      // 일반 발언 파싱
+      const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
+      if (m && !/^(요약|summary)$/i.test(m[1].trim())) {
+        transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
+      }
     }
-    if (!summary) summary = "토론이 종료되었습니다.";
+
+    // 요약이 없으면 마지막 줄을 폴백(마지막 줄이 발언이면 기본 문구)
+    if (!summary) {
+      const last = lines.at(-1) || "";
+      const isSpeaker = /^\s*[^:]{1,40}\s*:\s*/.test(last);
+      summary = isSpeaker ? "토론이 종료되었습니다." : last.replace(/^[-*\s]+/, "") || "토론이 종료되었습니다.";
+    }
 
     return res.json({ ok: true, transcript, summary });
   } catch (e) {
