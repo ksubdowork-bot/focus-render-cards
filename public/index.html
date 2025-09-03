@@ -500,7 +500,10 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-async function loadSamplePersonas(triggerBtn, { timeoutGAS=9000, timeoutLocal=4000, replace=true } = {}) {
+async function loadSamplePersonas(
+  triggerBtn,
+  { timeoutGAS=9000, timeoutLocal=4000, replace=true, force=null } = {}
+) {
   // 최후 폴백(하드코드)
   const localFallback = [
     // { name:"The Pioneers", role:"iPhone 16 Pro", traits:"...", bio:"..." },
@@ -513,87 +516,113 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS=9000, timeoutLocal=40
     bio:   p?.bio ?? p?.description ?? ""
   });
 
+  // replace 모드면 잠깐 리스트 비워서 "로컬이 먼저 보임" 착시 제거
+  if (replace) {
+    savePersonas([]);
+    renderPersonaList();
+  }
+
   let source = "localFallback";
   try {
     setButtonLoading(triggerBtn, true, "불러오는 중");
 
-    // 1) GAS (캐시버스터 붙임)
+    // ---- 1) GAS (강제 옵션 & 캐시 무효화)
     const GAS_URL = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec?t=" + Date.now();
     let items = null;
-    try {
-      const r = await fetchWithTimeout(GAS_URL, { timeout: timeoutGAS });
-      if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
-      const data = await r.json();
-      if (data?.ok && Array.isArray(data.items) && data.items.length) {
-        items = data.items.map(mapToItem);
-        source = "GAS";
+
+    const wantGAS = (force === "GAS" || force === null);
+    if (wantGAS) {
+      try {
+        const r = await fetchWithTimeout(GAS_URL, {
+          timeout: timeoutGAS,
+          cache: "no-store",
+          headers: { "pragma":"no-cache", "cache-control":"no-cache" }
+        });
+        if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
+        const data = await r.json();
+        if (data?.ok && Array.isArray(data.items) && data.items.length) {
+          items = data.items.map(mapToItem);
+          source = "GAS";
+        } else if (force === "GAS") {
+          throw new Error("GAS returned empty or ok:false");
+        }
+      } catch (err) {
+        console.warn("[GAS fallback]", err?.message || err);
+        if (force === "GAS") throw err; // 강제 모드면 바로 실패
       }
-    } catch (err) {
-      console.warn("GAS fetch fallback:", err?.message || err);
     }
 
-    // 2) 서버(personas-list)
-    if (!items) {
+    // ---- 2) 서버(personas-list)
+    const wantServer = (force === "server" || (force === null && !items));
+    if (wantServer) {
       try {
-        // 같은 오리진에서 서버가 떠 있어야 성공합니다.
-        const r2 = await fetchWithTimeout("/personas-list?t=" + Date.now(), { timeout: timeoutLocal });
+        const r2 = await fetchWithTimeout("/personas-list?t="+Date.now(), {
+          timeout: timeoutLocal,
+          cache: "no-store",
+          headers: { "pragma":"no-cache", "cache-control":"no-cache" }
+        });
         if (!r2.ok) throw new Error(`SERVER HTTP ${r2.status}`);
         const data2 = await r2.json();
         if (data2?.ok && Array.isArray(data2.items) && data2.items.length) {
           items = data2.items.map(mapToItem);
           source = "server";
+        } else if (force === "server") {
+          throw new Error("server returned empty");
         }
       } catch (err2) {
-        console.warn("server personas fallback:", err2?.message || err2);
+        console.warn("[server fallback]", err2?.message || err2);
+        if (force === "server") throw err2; // 강제 모드면 바로 실패
       }
     }
 
-    // 3) 로컬 하드코드
+    // ---- 3) 로컬 하드코드
     if (!items || !items.length) {
       items = localFallback.map(mapToItem);
       source = "localFallback";
     }
 
-    // 저장 방식: replace=true면 '원격 성공 시 덮어쓰기', false면 병합
+    // 저장: 원격 오면 교체(replace=true) / 아니면 병합
     const cur = loadPersonas().map(mapToItem);
     let finalList;
     if (replace && (source === "GAS" || source === "server")) {
-      finalList = items.slice(0, 5);   // 원격이 오면 교체
+      finalList = items.slice(0,5);
     } else {
-      // 병합(이름 중복 제거)
-      finalList = [...items, ...cur].reduce((acc, p) => {
-        if (!acc.find(x => x.name === p.name)) acc.push(p);
+      finalList = [...items, ...cur].reduce((acc,p)=>{
+        if (!acc.find(x=>x.name===p.name)) acc.push(p);
         return acc;
-      }, []).slice(0, 5);
+      },[]).slice(0,5);
     }
 
     savePersonas(finalList);
     renderPersonaList();
 
     const msgMap = {
-      GAS: "최신 트렌드 페르소나를 불러왔어요.",
-      server: "페르소나를 불러왔어요.",
+      GAS: "구글 시트에서 불러왔어요.",
+      server: "서버에서 불러왔어요.",
       localFallback: "샘플로 채웠어요."
     };
-    toast(msgMap[source] + (replace ? " (기존 항목 교체)" : " (기존과 병합)"));
-    console.log("[personas source]:", source, finalList);
+    toast(msgMap[source] + (replace ? " (기존 교체)" : " (병합)"));
+    console.log("[personas source ->]", source, finalList);
 
   } catch (e) {
-    console.error(e);
+    console.error("[loadSamplePersonas fatal]", e);
     // 최후 폴백
     const cur = loadPersonas().map(mapToItem);
     const merged = [...localFallback.map(mapToItem), ...cur].reduce((acc,p)=>{
-      if(!acc.find(x=>x.name===p.name)) acc.push(p);
+      if (!acc.find(x=>x.name===p.name)) acc.push(p);
       return acc;
-    }, []).slice(0,5);
+    },[]).slice(0,5);
     savePersonas(merged);
     renderPersonaList();
-    toast("오프라인 상태로 로컬 샘플로 채웠어요.");
+    toast("오프라인으로 로컬 샘플로 채웠어요.");
   } finally {
     setButtonLoading(triggerBtn, false);
   }
 }
+// 위까지가 구글시트
 
+
+  
 function currentMode(){ return modeLive.checked ? "live" : "demo"; }
 modeDemo.addEventListener("change", ()=> modeChanged());
 modeLive.addEventListener("change", ()=> modeChanged());
@@ -709,9 +738,8 @@ $("#btnSavePersona").addEventListener("click", ()=>{
 
 // 수정 취소
 $("#btnCancelEdit").addEventListener("click", exitEditMode);
-$("#btnLoadSamples").addEventListener("click", (e)=> {
-  const replace = true;                  // ← 원격 성공 시 로컬을 '덮어쓰기'
-  loadSamplePersonas(e.currentTarget, { replace });
+$("#btnLoadSamples").addEventListener("click", (e)=>{
+  loadSamplePersonas(e.currentTarget, { replace:true });
 });
   $("#btnRefreshList").addEventListener("click", renderPersonaList);
 
