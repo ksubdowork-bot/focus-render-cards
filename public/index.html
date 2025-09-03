@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>BX AI Focus Group</title>
   <style>
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
     :root{
       --brand:#5b6cff;
       --brand-ghost:#eef0ff;
@@ -261,6 +262,19 @@ BX AI Focus Group App 은 페르소나를 입력하거나, 2026년 트랜드가 
   </div>
 </div>
 <script>
+
+  function setButtonLoading(btn, on, baseLabel = "불러오는 중"){
+  if(!btn) return;
+  if(on){
+    if(!btn.dataset.label) btn.dataset.label = btn.textContent;
+    btn.disabled = true;
+    startEllipsis(btn, baseLabel); // 버튼 안에 "불러오는 중..." 점점점
+  }else{
+    stopEllipsis(btn);
+    btn.textContent = btn.dataset.label || "2026트랜드 페르소나 자동입력";
+    btn.disabled = false;
+  }
+}
 function savePersonas(arr){
   const slim = arr.slice(0,5).map(p => ({
     name:p.name,
@@ -477,15 +491,13 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-async function loadSamplePersonas(){
-  const fallback = [
-    // …(네가 쓰던 샘플 2~3개 유지)…
-  ];
+async function loadSamplePersonas(triggerBtn){
+  const fallback = [ /* 네가 쓰던 샘플들 */ ];
 
   try {
-    const url = "https://script.google.com/macros/s/AKfycbzLmyXgkxqk6K3AliRvkNpPUm6t3gwATjnhxkKNUdaEYckeapyZinZoILGe-RQe7m5F/exec";
-    // (선택) 토큰 쓴다면: const url = "…/exec?limit=50&key=YOUR_SIMPLE_TOKEN";
+    setButtonLoading(triggerBtn, true, "불러오는 중");  // ← 시작!
 
+    const url = "https://script.google.com/macros/s/AKfycby-Bl4JTENYsZRxtx6aup7TN4JbJd7NISti2uTCCISdCDamAqSW2CBICmMUg3cCzdRm/exec";
     const r = await fetch(url);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
@@ -499,8 +511,9 @@ async function loadSamplePersonas(){
 
     savePersonas(merged);
     renderPersonaList();
+    toast("자동 입력 완료!");
   } catch (e) {
-    // 실패 시에도 UX 망가지지 않도록 fallback
+    console.error(e);
     const cur = loadPersonas();
     const merged = [...fallback, ...cur].reduce((acc,p)=>{
       if(!acc.find(x=>x.name===p.name)) acc.push(p);
@@ -508,6 +521,9 @@ async function loadSamplePersonas(){
     }, []).slice(0,5);
     savePersonas(merged);
     renderPersonaList();
+    toast("서버 응답이 느려서 로컬 샘플로 채웠어요.");
+  } finally {
+    setButtonLoading(triggerBtn, false); // ← 종료!
   }
 }
 // ---------- 로컬 샘플 로드
@@ -665,7 +681,7 @@ $("#btnSavePersona").addEventListener("click", ()=>{
 
 // 수정 취소
 $("#btnCancelEdit").addEventListener("click", exitEditMode);
-$("#btnLoadSamples").addEventListener("click", loadSamplePersonas);
+$("#btnLoadSamples").addEventListener("click", (e)=> loadSamplePersonas(e.currentTarget));
 $("#btnRefreshList").addEventListener("click", renderPersonaList);
 
 // 초기화
