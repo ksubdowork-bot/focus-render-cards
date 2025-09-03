@@ -1,4 +1,5 @@
 /* --- Consent Gate (splash) --- */
+
 [hidden] { display: none !important; }
 #consentGate[aria-hidden="true"]{ display:none !important; }
 .consent-backdrop{
@@ -114,6 +115,7 @@ textarea{min-height:110px; resize:vertical}
 }
 
 /* Buttons — 컬러 변형 */
+.btn[disabled]{ opacity:.6; cursor:not-allowed }
 .bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
 .btn{
   appearance:none; border:none; border-radius:12px; font-weight:800;
