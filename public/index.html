@@ -261,6 +261,12 @@ BX AI Focus Group App 은 페르소나를 입력하거나, 미리 준비된 소�
   </div>
 </div>
 <script>
+  function normalizePersona(p){
+  return {
+    ...p,
+    bio: (p.bio ?? p.description ?? "")
+  };
+}
 // --- 로딩 말줄임표 애니메이션 ---
 const _loadingTimers = new WeakMap();
 
