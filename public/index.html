@@ -262,7 +262,23 @@ BX AI Focus Group App 은 페르소나를 입력하거나, 2026년 트랜드가 
   </div>
 </div>
 <script>
+// --- 캐시 유틸 ---
+const LSK_PERSONAS = "personas.v1";           // 현재 네가 쓰는 저장소
+const LSK_PERSONAS_CACHE = "personas.cache";  // 원본 캐시(백업용)
 
+function savePersonasCache(items){
+  const payload = { savedAt: Date.now(), items };
+  localStorage.setItem(LSK_PERSONAS_CACHE, JSON.stringify(payload));
+}
+function loadPersonasCache(){
+  try{
+    const raw = localStorage.getItem(LSK_PERSONAS_CACHE);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.items)) return null;
+    return parsed.items;
+  }catch(_){ return null; }
+}
   function setButtonLoading(btn, on, baseLabel = "불러오는 중"){
   if(!btn) return;
   if(on){
@@ -500,7 +516,6 @@ function updateGroupSelectedStyles(){
   });
 }
   // 구글샘플로드
-// --- 구글 시트 전용 로더 (GAS only) ---
 async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true } = {}) {
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxVmevb03FhN8mlXS5zqN7QiTrMte_W318fPS3n68p1b1iIFDBGm0MX-Rx2xRTIBP1W/exec?t=" + Date.now();
 
@@ -511,7 +526,6 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
     bio:   p?.bio ?? p?.description ?? ""
   });
 
-  // 응답이 진짜 JSON인지 보증
   const mustJson = async (res) => {
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     if (!ct.includes("application/json")) {
@@ -527,7 +541,7 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
     const r = await fetchWithTimeout(GAS_URL, {
       timeout: timeoutGAS,
       cache: "no-store",
-      headers: { "pragma": "no-cache", "cache-control": "no-cache" }
+      headers: { "pragma":"no-cache", "cache-control":"no-cache" }
     });
     if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
 
@@ -536,9 +550,11 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
       throw new Error("GAS ok:false 또는 items 비어있음");
     }
 
+    // ① 원본 캐시 저장
     const items = data.items.map(mapToItem);
+    savePersonasCache(items);
 
-    // 저장: replace면 교체, 아니면 병합(이름 중복 제거)
+    // ② 앱 저장(교체 or 병합)
     const cur = loadPersonas().map(mapToItem);
     const finalList = (replace)
       ? items.slice(0, 5)
@@ -549,19 +565,25 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
 
     savePersonas(finalList);
     renderPersonaList();
-
-    toast("불러오기 성공." + (replace ? " (기존 교체)" : " (병합)"));
-    console.log("[GAS only] loaded:", finalList);
-
+    toast("구글 시트에서 불러왔어요." + (replace ? " (기존 교체)" : " (병합)"));
   } catch (err) {
     console.error("[GAS only error]", err);
-    // 실패 시: 아무 것도 건드리지 않음(로컬 유지)
-    toast("불러오기에 실패했어요. 관리자에게 문의하세요");
+
+    // ❗ 실패 시: 캐시에 저장된 원본으로 폴백
+    const cached = loadPersonasCache();
+    if (cached && cached.length) {
+      const items = cached.map(mapToItem);
+      const finalList = items.slice(0, 5); // 폴백은 간단히 교체
+      savePersonas(finalList);
+      renderPersonaList();
+      toast("네트워크 오류—저장된 캐시에서 불러왔어요.");
+    } else {
+      toast("구글 불러오기에 실패했고, 저장된 캐시도 없어요.");
+    }
   } finally {
     setButtonLoading(triggerBtn, false);
   }
 }
-
   
 
     // ---- 3) 로컬 하드코드
