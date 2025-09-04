@@ -23,45 +23,30 @@
       --shadow-sm:0 6px 18px rgba(41,53,108,.08);
       --chip:#f2f4f7;
     }
-/* --- Consent Gate (splash) --- */
-.consent-backdrop{
-  position:fixed; inset:0; background:rgba(17,24,39,.6);
-  display:flex; align-items:center; justify-content:center; z-index:9999;
-}
-.consent-modal{
-  width:min(680px, 92vw);
-  background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25);
-  padding:22px;
-}
-.consent-title{font-size:18px; font-weight:800; margin:0 0 8px}
-.consent-desc{font-size:14px; color:#4b5563; white-space:pre-wrap; line-height:1.6}
-.consent-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
-/* 앱 잠금 */
-.app-disabled{ filter:blur(1px); pointer-events:none; user-select:none; }
+    /* --- Consent Gate (splash) --- */
+    .consent-backdrop{
+      position:fixed; inset:0; background:rgba(17,24,39,.6);
+      display:flex; align-items:center; justify-content:center; z-index:9999;
+    }
+    .consent-modal{
+      width:min(680px, 92vw);
+      background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.25);
+      padding:22px;
+    }
+    .consent-title{font-size:18px; font-weight:800; margin:0 0 8px}
+    .consent-desc{font-size:14px; color:#4b5563; white-space:pre-wrap; line-height:1.6}
+    .consent-actions{display:flex; gap:8px; justify-content:flex-end; margin-top:18px}
+    /* 앱 잠금 */
+    .app-disabled{ filter:blur(1px); pointer-events:none; user-select:none; }
 
-/* (선택) 모달 안의 기본 버튼 컬러가 그라데이션에 덮이지 않도록 */
-.consent-modal .btn.primary{ background:var(--brand); color:#fff }
-    
     *{box-sizing:border-box}
-
-    
     body{
       margin:0; background:var(--bg); color:var(--ink);
       font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Malgun Gothic,sans-serif;
     }
     .wrap{max-width:980px; margin:32px auto; padding:0 16px}
     h1{font-size:20px; margin:0 0 16px; display:flex; gap:10px; align-items:center}
-    .badge{font-size:12px; padding:4px 8px; border-radius:999px; background:#e9eefb; color:#4252d9}
-    .mode-toggle{margin-left:auto; display:flex; gap:8px; align-items:center}
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      background:#fff; padding:4px; border-radius:999px; box-shadow:var(--shadow-sm)
-    }
-    .pill input{display:none}
-    .pill label{
-      padding:6px 12px; border-radius:999px; cursor:pointer; color:var(--muted)
-    }
-    .pill input:checked + label{ background:var(--brand); color:#fff }
+    .badge{font-size:12px; padding:4px 8px; border-radius:999px; background:#e6fff3; color:#15803d}
 
     .section{
       background:var(--card); border-radius:var(--radius);
@@ -76,7 +61,7 @@
     }
     input:focus,textarea:focus,select:focus{border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-ghost)}
     textarea{min-height:96px; resize:vertical}
-    .hint{font-size:12px; color:var(--muted); margin-top:8px}
+    .hint{font-size:12px; color:#6b7280; margin-top:8px}
 
     .btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
     .btn{
@@ -94,9 +79,8 @@
       box-shadow:var(--shadow-sm); position:relative;
     }
     .card .name{font-weight:700}
-    .card .meta{font-size:12px; color:var(--muted); margin-top:2px}
-    .chip{display:inline-block; padding:4px 8px; border-radius:999px; background:var(--chip); font-size:12px; color:#555}
-
+    .card .meta{font-size:12px; color:#6b7280; margin-top:2px}
+    .chip{display:inline-block; padding:4px 8px; border-radius:999px; background:#f2f4f7; font-size:12px; color:#555}
     .card .kebab{ position:absolute; top:8px; right:8px; display:flex; gap:6px }
     .tag { font-size:11px; padding:3px 8px; border-radius:999px; background:#eef2ff; color:#4f46e5 }
 
@@ -111,7 +95,6 @@
 
     @media (max-width:720px){
       .row{grid-template-columns:1fr}
-      .mode-toggle{width:100%; justify-content:flex-end}
     }
   </style>
   <script defer>
@@ -151,15 +134,7 @@
   <div class="wrap">
     <h1>
       AI 익스피리언스 포커스 그룹
-      <span id="modeBadge" class="badge">DEMO</span>
-      <div class="mode-toggle">
-        <div class="pill">
-          <input type="radio" name="mode" id="modeDemo" value="demo" checked>
-          <label for="modeDemo">Demo</label>
-          <input type="radio" name="mode" id="modeLive" value="live">
-          <label for="modeLive">Live</label>
-        </div>
-      </div>
+      <span id="modeBadge" class="badge">LIVE</span>
     </h1>
 
     <!-- 1) 페르소나 입력/저장 -->
@@ -184,111 +159,96 @@
         </div>
       </div>
 
-    
       <div class="btns">
         <button class="btn primary" id="btnSavePersona">페르소나 저장</button>
         <button class="btn ghost" id="btnLoadSamples">2026트랜드 페르소나 자동입력</button>
         <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
       </div>
 
-   <!--  이것은 로컬에 저장할지말지  -->
-<!-- <div class="btns">
-  <button class="btn ghost" id="btnExportJson">파일 내보내기</button>
-  <input type="file" id="importJsonInput" accept="application/json" style="display:none">
-  <button class="btn ghost" id="btnImportJson">패르소나 불러오기</button>
-</div>  
-    
-      여기까지 -->
-    
-
       <div class="hint">* 저장 후 아래 카드에서 “클릭”하면 해당 슬롯/그룹 자동 적용</div>
-      <div class="cards" id="personaList"></div> 
+      <div class="cards" id="personaList"></div>
     </section>
     
-<!-- 2) 솔로 대화  -->
-<section class="section" id="secSolo">
-  <div class="sec-title">2) 솔로 질문 </div>
-  <div class="row">
-    <div class="full">
-      <label>페르소나</label>
-      <select id="soloPersonaSelect"></select>
-    </div>
-    <div>
-      <label>대화 컨텍스트 반영</label>
-      <select id="soloLimit">
-        <option>10</option><option selected>20</option><option>30</option><option>50</option>
-      </select>
-    </div>
-    <div class="full">
-      <label>질문</label>
-      <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고싶을까?" />
-    </div>
-  </div>
-  <div class="btns">
-    <button class="btn primary" id="btnAskSolo">질문하기</button>
-  </div>
-  <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
-</section>
+    <!-- 2) 솔로 대화  -->
+    <section class="section" id="secSolo">
+      <div class="sec-title">2) 솔로 질문 </div>
+      <div class="row">
+        <div class="full">
+          <label>페르소나</label>
+          <select id="soloPersonaSelect"></select>
+        </div>
+        <div>
+          <label>대화 컨텍스트 반영</label>
+          <select id="soloLimit">
+            <option>10</option><option selected>20</option><option>30</option><option>50</option>
+          </select>
+        </div>
+        <div class="full">
+          <label>질문</label>
+          <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고싶을까?" />
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn primary" id="btnAskSolo">질문하기</button>
+      </div>
+      <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
+    </section>
     
- <!-- 3) 그룹 대화 -->
-<section class="section" id="secGroup">
-  <div class="sec-title">3) 그룹 대화(최대 4명)</div>
-  <div class="hint">아래 목록에서 페르소나를 선택하세요. 선택된 페르소나가 발언합니다.</div>
+    <!-- 3) 그룹 대화 -->
+    <section class="section" id="secGroup">
+      <div class="sec-title">3) 그룹 대화(최대 4명)</div>
+      <div class="hint">아래 목록에서 페르소나를 선택하세요. 선택된 페르소나가 발언합니다.</div>
 
-  <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;"></div>
+      <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;"></div>
 
-  <div class="row">
-    <div class="full">
-      <label>토픽 / 과제</label>
-      <input id="groupTopic" placeholder="예: 선택한 페르소나가, 갤럭시 스토어를 방문한다면 가장 먼저 체험해보고싶은 것?" />
-    </div>
- 
-    <div>
-      <label>라운드 수(기본 2)</label>
-<select id="groupRounds">
-  <option>1</option>
-  <option>2</option>
-  <option selected>3</option>
-  <option>4</option>
-  <option>5</option>
-</select>
-    </div>
-    
-    <div>
-      <label>대화 컨텍스트 반영</label>
-      <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
-    </div>
+      <div class="row">
+        <div class="full">
+          <label>토픽 / 과제</label>
+          <input id="groupTopic" placeholder="예: 선택한 페르소나가, 갤럭시 스토어를 방문한다면 가장 먼저 체험해보고싶은 것?" />
+        </div>
+        <div>
+          <label>라운드 수(기본 2)</label>
+          <select id="groupRounds">
+            <option>1</option>
+            <option>2</option>
+            <option selected>3</option>
+            <option>4</option>
+            <option>5</option>
+          </select>
+        </div>
+        <div>
+          <label>대화 컨텍스트 반영</label>
+          <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="btn success" id="btnStartGroup">그룹 대화 시작</button>
+      </div>
+
+      <div id="groupAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
+    </section>
   </div>
 
-  <div class="btns">
-    <button class="btn success" id="btnStartGroup">그룹 대화 시작</button>
-  </div>
-
-  <!-- ✅ 하나만 남기고 aria 속성 추가 -->
-  <div id="groupAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
-</section>
-    
-  </div>
- <footer style="
+  <footer style="
     bottom:0;
     left:0;
     width:100%;
     text-align:center;
     font-size:12px;
     color:#6b7280;
-    background:#f7f8fb;  /* 배경색을 페이지와 통일 */
+    background:#f7f8fb;
     padding:8px 0;
-    border-top:1px solid #e5e7eb;
-  ">
-      Experience Design TF · All rights reserved. · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
-</footer>
-</div> <!-- ✅ appRoot 닫기 -->
+    border-top:1px solid #e5e7eb;">
+    Experience Design TF · All rights reserved. · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
+  </footer>
+</div>
 
 <!-- ✅ 동의(Consent) 모달 -->
 <div id="consentGate" class="consent-backdrop" role="dialog" aria-modal="true">
   <div class="consent-modal">
     <h2 class="consent-title">안내 및 동의</h2>
-<p class="consent-desc">
+    <p class="consent-desc">
 RFTM
 BX AI Focus Group App 업데이트된 2026년 트랜드가 반영된 소비자 페르소나를 불러오거나, 직접 입력한 페르소나가 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
 본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다. 따라서 입력한 페르소나, 모더레이터의 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
@@ -309,10 +269,11 @@ BX AI Focus Group App 업데이트된 2026년 트랜드가 반영된 소비자 �
     </div>
   </div>
 </div>
+
 <script>
 // --- 캐시 유틸 ---
-const LSK_PERSONAS = "personas.v1";           // 현재 네가 쓰는 저장소
-const LSK_PERSONAS_CACHE = "personas.cache";  // 원본 캐시(백업용)
+const LSK_PERSONAS = "personas.v1";
+const LSK_PERSONAS_CACHE = "personas.cache";
 
 function savePersonasCache(items){
   const payload = { savedAt: Date.now(), items };
@@ -327,12 +288,12 @@ function loadPersonasCache(){
     return parsed.items;
   }catch(_){ return null; }
 }
-  function setButtonLoading(btn, on, baseLabel = "불러오는 중"){
+function setButtonLoading(btn, on, baseLabel = "불러오는 중"){
   if(!btn) return;
   if(on){
     if(!btn.dataset.label) btn.dataset.label = btn.textContent;
     btn.disabled = true;
-    startEllipsis(btn, baseLabel); // 버튼 안에 "불러오는 중..." 점점점
+    startEllipsis(btn, baseLabel);
   }else{
     stopEllipsis(btn);
     btn.textContent = btn.dataset.label || "2026트랜드 페르소나 자동입력";
@@ -344,15 +305,13 @@ function savePersonas(arr){
     name:p.name,
     role:p.role,
     traits:p.traits,
-    bio:p.bio          // description 저장 안 함
+    bio:p.bio
   }));
   localStorage.setItem(LSK, JSON.stringify(slim));
 }
-  
+
 // --- 로딩 말줄임표 애니메이션 ---
 const _loadingTimers = new WeakMap();
-
-/** el 안에 baseText + ... 를 0~3개 반복 표시 */
 function startEllipsis(el, baseText = "") {
   stopEllipsis(el);
   el.setAttribute("aria-busy", "true");
@@ -385,12 +344,10 @@ async function fetchWithTimeout(url, { timeout = 10000, ...opts } = {}) {
 }
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
-const modeBadge = $("#modeBadge");
-const modeDemo = $("#modeDemo");
-const modeLive = $("#modeLive");
 
 const LSK = "personas.v1"; // localStorage key
 let editIndex = null;
+
 function fillForm(p){
   $("#pName").value   = p?.name   || "";
   $("#pRole").value   = p?.role   || "";
@@ -412,12 +369,8 @@ function exitEditMode(){
   $("#btnSavePersona").textContent = "페르소나 저장";
   $("#btnCancelEdit").style.display = "none";
 }
-  function normalizePersona(p){
-  return {
-    ...p,
-    // 서버/샘플에서 description으로 올 수도 있으니 bio로 흡수
-    bio: (p && (p.bio ?? p.description ?? "")),
-  };
+function normalizePersona(p){
+  return { ...p, bio: (p && (p.bio ?? p.description ?? "")) };
 }
 function toast(msg){ alert(msg); }
 
@@ -425,11 +378,10 @@ function loadPersonas(){
   try{
     const arr = JSON.parse(localStorage.getItem(LSK) || "[]");
     const list = Array.isArray(arr) ? arr : [];
-    // description만 있는 경우 bio로 매핑
     return list.map(normalizePersona);
   }catch(_){ return []; }
 }
-  
+
 function addPersona(p){
   const arr = loadPersonas();
   if(arr.length >= 6){ toast("최대 6명까지 저장할 수 있어요."); return false; }
@@ -464,15 +416,11 @@ function renderPersonaList(){
         <button class="btn danger" data-del>삭제</button>
       </div>
     `;
-
-    // 카드 클릭 → 선택 적용 (편집/삭제 버튼은 제외)
     el.addEventListener("click", (e)=>{
       if(e.target.closest("[data-del]")) return;
       if(e.target.closest("[data-edit]")) return;
       applyPersonaToSelectors(p);
     });
-
-    // 삭제
     el.querySelector("[data-del]").addEventListener("click",(e)=>{
       e.stopPropagation();
       if(confirm("이 페르소나를 삭제할까요?")){
@@ -481,20 +429,16 @@ function renderPersonaList(){
         refreshSelectors();
       }
     });
-
-    // 편집 → 폼에 값 채우고 편집 모드 진입
     el.querySelector("[data-edit]").addEventListener("click",(e)=>{
       e.stopPropagation();
       enterEditMode(idx, p);
     });
-
     box.appendChild(el);
   });
 
   refreshSelectors();
   renderGroupPickArea();
 }
-
 
 // 솔로/그룹 선택박스 채우기
 function refreshSelectors(){
@@ -564,22 +508,18 @@ function updateGroupSelectedStyles(){
   });
 }
 
-
-
-  
-// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백 (디버그 강화판)
+// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
 async function loadSamplePersonas(triggerBtn, {
   timeoutGAS = 12000,
   replace = true,
   sheet,
   limit = 5
 } = {}) {
-  // 1) URL 구성 (★ /exec 최신 배포 URL로 교체 필요)
   const BASE = "https://script.google.com/macros/s/AKfycbwUB7ATmDaDjuOKGrlRlTrxUuWf8yUg9_boJrGOmbr6ocqqCdS5aQf3giUKpxHLr3_e/exec";
   const qs = new URLSearchParams();
   if (sheet) qs.set("sheet", sheet);
   if (limit) qs.set("limit", String(limit));
-  qs.set("t", Date.now()); // 캐시 버스터
+  qs.set("t", Date.now());
   const GAS_URL = `${BASE}?${qs.toString()}`;
 
   const mapToItem = (p) => ({
@@ -589,42 +529,25 @@ async function loadSamplePersonas(triggerBtn, {
     bio:    p?.bio ?? p?.description ?? ""
   });
 
-  // 응답이 JSON이든 text/plain이든 일단 받아서 파싱 시도
   const readAsJson = async (res) => {
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     let raw;
     try {
       raw = await res.text();
-    } catch(e) {
-      throw new Error(`응답 바디 읽기 실패: ${e?.message || e}`);
-    }
-    // 미리보기 180자
+    } catch(e) { throw new Error(`응답 바디 읽기 실패: ${e?.message || e}`); }
     const preview = raw.slice(0, 180).replace(/\s+/g, " ");
-    // content-type 이 JSON이 아니더라도 JSON 파싱 시도 (일부 환경에서 text/plain으로 내려오는 경우 대비)
-    try {
-      return JSON.parse(raw);
-    } catch {
-      throw new Error(`GAS가 JSON이 아닙니다. ct=${ct} preview="${preview}"`);
-    }
+    try { return JSON.parse(raw); }
+    catch { throw new Error(`GAS가 JSON이 아닙니다. ct=${ct} preview="${preview}"`); }
   };
 
   try {
     setButtonLoading(triggerBtn, true, "불러오는 중");
-
-    // 2) 단순 GET (프리플라이트 회피용: 커스텀 헤더/credentials 없음)
     const r = await fetchWithTimeout(GAS_URL, {
-      timeout: timeoutGAS,
-      method: "GET",
-      cache: "no-store",
-      // mode: "cors",  // 기본이 cors지만 명시하고 싶다면 주석 해제
-      credentials: "omit"
+      timeout: timeoutGAS, method: "GET", cache: "no-store", credentials: "omit"
     });
 
-    // 상태/헤더 디버그
-    const statusInfo =
-      `status=${r.status}, ct="${(r.headers.get("content-type")||"").toLowerCase()}"`;
+    const statusInfo = `status=${r.status}, ct="${(r.headers.get("content-type")||"").toLowerCase()}"`;
     if (!r.ok) {
-      // 본문도 읽어 에러 표면화
       const errText = await r.text().catch(()=>"(본문 읽기 실패)");
       throw new Error(`GAS HTTP ${r.status}. ${statusInfo}. body="${errText.slice(0,180)}"`);
     }
@@ -634,67 +557,46 @@ async function loadSamplePersonas(triggerBtn, {
       throw new Error(`GAS ok:false 또는 items 비어있음. ${statusInfo}`);
     }
 
-    // 3) 저장
     const items = data.items.map(mapToItem);
-    savePersonasCache(items); // 원본 캐시
+    savePersonasCache(items);
 
     const cur = loadPersonas().map(mapToItem);
     const finalList = replace
       ? items.slice(0, 6)
       : [...items, ...cur]
           .filter((p, i, arr) => p.name && arr.findIndex(x => x.name === p.name) === i)
-          .slice(0, 5);
+          .slice(0, 6);
 
     savePersonas(finalList);
     renderPersonaList();
-    toast("불러오기 성공." + (replace ? "" : ""));
-requestAnimationFrame(() => {
-  const sec = document.getElementById("secSolo");
-  if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  // 첫 번째 페르소나를 자동 선택(선택값 비었을 때만)
-  const list = loadPersonas();
-  const sel = document.getElementById("soloPersonaSelect");
-  if (sel && !sel.value && list.length) sel.value = list[0].name;
-
-  // 질문 입력창 포커스
-  const q = document.getElementById("soloQuestion");
-  if (q) q.focus();
-});
+    toast("불러오기 성공.");
+    requestAnimationFrame(() => {
+      const sec = document.getElementById("secSolo");
+      if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+      const list = loadPersonas();
+      const sel = document.getElementById("soloPersonaSelect");
+      if (sel && !sel.value && list.length) sel.value = list[0].name;
+      const q = document.getElementById("soloQuestion");
+      if (q) q.focus();
+    });
   } catch (err) {
     console.error("[GAS fetch error]", err);
     const msg = (err && err.message) ? err.message : String(err);
-
-    // 4) 실패 시 캐시 폴백
     const cached = loadPersonasCache();
     if (cached?.length) {
-      const items = cached.map(mapToItem).slice(0, 5);
+      const items = cached.map(mapToItem).slice(0, 6);
       savePersonas(items);
       renderPersonaList();
       toast(`원격 오류(캐시로 대체): ${msg}`);
     } else {
-      toast(`불러오기 실패, 페르소나를 직접 입력하세요. \n${msg}`);
+      toast(`불러오기 실패, 페르소나를 직접 입력하세요.\n${msg}`);
     }
   } finally {
     setButtonLoading(triggerBtn, false);
   }
 }
-  
-// 위까지가 구글시트
 
-
-  
-function currentMode(){ return modeLive.checked ? "live" : "demo"; }
-modeDemo.addEventListener("change", ()=> modeChanged());
-modeLive.addEventListener("change", ()=> modeChanged());
-function modeChanged(){
-  const m = currentMode();
-  modeBadge.textContent = m==="live" ? "LIVE" : "DEMO";
-  modeBadge.style.background = m==="live" ? "#e6fff3" : "#e9eefb";
-  modeBadge.style.color = m==="live" ? "#15803d" : "#4252d9";
-}
-
-// -------- 솔로 대화
+// -------- 솔로 대화 (항상 LIVE, 실패 시 토스트만)
 $("#btnAskSolo").addEventListener("click", async ()=>{
   const name = $("#soloPersonaSelect").value;
   const q = $("#soloQuestion").value.trim();
@@ -707,32 +609,32 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
   const out = $("#soloAnswer");
   out.style.display = "block";
 
-  if(currentMode()==="demo"){
-    out.textContent = `[DEMO] ${p.name}의 시점으로 답변합니다.\n\nQ. ${q}\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
-    return;
-  }
-
   try{
-    startEllipsis(out, "[LIVE] AI 응답 생각 중");
+    startEllipsis(out, "AI 응답 생각 중");
     const res = await fetch("/chat/solo",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ persona:p, question:q, historyLimit:limit })
     });
     if(!res.ok){
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status} - ${t}`);
+      toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
+      return;
     }
     const data = await res.json();
+    if (!data?.ok) {
+      toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
+      return;
+    }
     out.textContent = (data.answer||"").trim() || "(빈 응답)";
   }catch(err){
-    out.textContent = `오류: ${err.message}`;
+    console.error(err);
+    toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
   } finally {
     stopEllipsis(out);
   }
 });
 
-// -------- 그룹 대화
+// -------- 그룹 대화 (항상 LIVE, 실패 시 토스트만)
 $("#btnStartGroup").addEventListener("click", async ()=>{
   const names = getGroupSelected();
   const list = loadPersonas().filter(p=>names.includes(p.name));
@@ -744,24 +646,23 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
   const out = $("#groupAnswer");
   out.style.display = "block";
 
-  if(currentMode()==="demo"){
-    const heads = list.map(p=>p.name).join(", ");
-    out.textContent = `[DEMO] (${heads}) 라운드 ${rounds}회 대화 요약.\n\n- (데모 응답) 실제 모드는 서버 API 연결 후 작동합니다.`;
-    return;
-  }
-
   try{
-    startEllipsis(out, "[LIVE] 뒤에서 몰래 이야기중");
+    startEllipsis(out, "대화 생성 중");
     const res = await fetch("/chat/group",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit })
     });
     if(!res.ok){
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status} - ${t}`);
+      toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
+      return;
     }
     const data = await res.json();
+    if (!data?.ok) {
+      toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
+      return;
+    }
+
     if (Array.isArray(data.transcript)) {
       const lines = data.transcript.map(it => `${it.speaker}: ${it.text}`).join("\n");
       const sum = data.summary ? `\n\n요약: ${data.summary}` : "";
@@ -770,14 +671,14 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
       out.textContent = (data.transcript || data.summary || "").trim() || "(빈 응답)";
     }
   }catch(err){
-    out.textContent = `오류: ${err.message}`;
+    console.error(err);
+    toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
   } finally {
     stopEllipsis(out);
   }
 });
 
 // -------- 저장/편집/삭제
-// 저장(신규 or 수정 저장)
 $("#btnSavePersona").addEventListener("click", ()=>{
   const p = {
     name: $("#pName").value.trim(),
@@ -788,34 +689,30 @@ $("#btnSavePersona").addEventListener("click", ()=>{
   if(!p.name){ toast("이름은 필수입니다."); return; }
 
   if(editIndex !== null){
-    updatePersona(editIndex, p);   // 덮어쓰기
+    updatePersona(editIndex, p);
     exitEditMode();
   }else{
-    if(!addPersona(p)) return;     // 최대 5명 가드
+    if(!addPersona(p)) return;
     clearForm();
   }
   renderPersonaList();
 });
-
-// 수정 취소
 $("#btnCancelEdit").addEventListener("click", exitEditMode);
 $("#btnLoadSamples").addEventListener("click", (e)=>{
-  // 원격이 오면 교체, 반드시 GAS 먼저/전용으로 시도
   loadSamplePersonas(e.currentTarget, {
     replace: true,
     timeoutGAS: 12000,
-    timeoutLocal: 5000,
-    force: "GAS"   // ← 이걸로 강제
+    timeoutLocal: 5000
   });
 });
 document.getElementById("btnRefreshList")?.addEventListener("click", renderPersonaList);
-  
+
 // 초기화
-modeChanged();
 renderPersonaList();
 
-  function exportCacheAsJson() {
-  const items = loadPersonasCache() || loadPersonas(); // 캐시 우선
+// --- JSON 백업/복원 (선택 기능)
+function exportCacheAsJson() {
+  const items = loadPersonasCache() || loadPersonas();
   const payload = { savedAt: Date.now(), items };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -827,16 +724,14 @@ renderPersonaList();
   a.remove();
   URL.revokeObjectURL(url);
 }
-
 function importCacheFromJsonFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const parsed = JSON.parse(String(e.target.result||""));
       if (!parsed || !Array.isArray(parsed.items)) throw new Error("items 배열이 없음");
-      // 캐시에 저장하고 즉시 적용
       savePersonasCache(parsed.items);
-      savePersonas(parsed.items); // 앱 저장소에도 반영(최대치 컷은 savePersonas가 처리)
+      savePersonas(parsed.items);
       renderPersonaList();
       toast("백업 JSON을 불러와 적용했습니다.");
     } catch (err) {
@@ -845,8 +740,6 @@ function importCacheFromJsonFile(file) {
   };
   reader.readAsText(file);
 }
-
-// 버튼 바인딩
 document.getElementById("btnExportJson")?.addEventListener("click", exportCacheAsJson);
 document.getElementById("btnImportJson")?.addEventListener("click", () => {
   document.getElementById("importJsonInput").click();
@@ -855,8 +748,6 @@ document.getElementById("importJsonInput")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (file) importCacheFromJsonFile(file);
 });
-
-  
 </script>
 </body>
 </html>
