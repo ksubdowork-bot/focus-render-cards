@@ -143,7 +143,7 @@
       <div class="row">
         <div>
           <label>이름</label>
-          <input id="pName" placeholder="예: 도경섭" />
+          <input id="pName" placeholder="예: 한주명" />
         </div>
         <div>
           <label>모바일 기기</label>
@@ -155,7 +155,7 @@
         </div>
         <div class="full">
           <label>상세 설명</label>
-          <textarea id="pBio" placeholder="(자세할수록좋음)모바일 활용, 오프라인 체험에 관한 내용 등"></textarea>
+          <textarea id="pBio" placeholder="(자세할수록좋음)소셜 미디어 적극활용, 패션 인풀루언서로 활동하며, 사진을 많이 찍는다. 국가별로 여행이 많이 시차때문에 수면의 질이 않좋아 걱정이 많다"></textarea>
         </div>
       </div>
 
@@ -185,7 +185,7 @@
         </div>
         <div class="full">
           <label>질문</label>
-          <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고싶을까?" />
+          <input id="soloQuestion" placeholder="예: 새로운 모바일기기를 구매한다면 어떤기능을 직접 써보고 싶을까?" />
         </div>
       </div>
       <div class="btns">
@@ -249,12 +249,13 @@
   <div class="consent-modal">
     <h2 class="consent-title">안내 및 동의</h2>
     <p class="consent-desc">
-RFTM
-BX AI Focus Group App 업데이트된 2026년 트랜드가 반영된 소비자 페르소나를 불러오거나, 직접 입력한 페르소나가 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
+R.T.F.M.
+BX AI Focus Group App 은 Experince Design TF 내부에서 직접 제작한, 오프라인 이벤트의 소비자 인사이트를 얻기 위한 AI 툴 입니다.
+내부에서 항상 업데이트 중인 2026년 트랜드가 반영된 소비자 페르소나를 불러오거나, 사용자가 직접 페르소나를 입력하여 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
 본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다. 따라서 입력한 페르소나, 모더레이터의 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
   
 사용 방법:
-1) 저장된 최신 페르소나(리서치기관 정보 활용)를 선택하거나, 프로젝트에 맞는 페르소나를 직접 입력합니다.
+1) 저장된 최신 페르소나를 선택하여 적용하거나, 프로젝트에 맞는 페르소나를 직접 입력합니다.
 2) 솔로 질문 또는 그룹 대화를 통해 원하는 주제로 AI 토론을 진행합니다. 주제/ 질문이 정확하고 구체적일 수록 좋은 인사이트를 얻을 수 있습니다.
 3) 대화 결과에서 프로젝트에 활용할 수 있는 인사이트를 얻습니다.
 
@@ -610,7 +611,7 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
   out.style.display = "block";
 
   try{
-    startEllipsis(out, "AI 응답 생각 중");
+    startEllipsis(out, "똘똘하게 말하고 싶어서 생각중");
     const res = await fetch("/chat/solo",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -647,7 +648,7 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
   out.style.display = "block";
 
   try{
-    startEllipsis(out, "대화 생성 중");
+    startEllipsis(out, "처음에 말하기 좀 그래서 고민중");
     const res = await fetch("/chat/group",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
