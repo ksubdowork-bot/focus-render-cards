@@ -190,6 +190,13 @@
         <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
       </div>
 
+      
+<div class="btns">
+  <button class="btn ghost" id="btnExportJson">백업 JSON 내보내기</button>
+  <input type="file" id="importJsonInput" accept="application/json" style="display:none">
+  <button class="btn ghost" id="btnImportJson">백업 JSON 불러오기</button>
+</div>
+
       <div class="hint">* 저장 후 아래 카드에서 “클릭”하면 해당 슬롯/그룹 자동 적용</div>
 
       <div class="cards" id="personaList"></div>
@@ -793,6 +800,49 @@ document.getElementById("btnRefreshList")?.addEventListener("click", renderPerso
 modeChanged();
 renderPersonaList();
 
+  function exportCacheAsJson() {
+  const items = loadPersonasCache() || loadPersonas(); // 캐시 우선
+  const payload = { savedAt: Date.now(), items };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `personas-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importCacheFromJsonFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(String(e.target.result||""));
+      if (!parsed || !Array.isArray(parsed.items)) throw new Error("items 배열이 없음");
+      // 캐시에 저장하고 즉시 적용
+      savePersonasCache(parsed.items);
+      savePersonas(parsed.items); // 앱 저장소에도 반영(최대치 컷은 savePersonas가 처리)
+      renderPersonaList();
+      toast("백업 JSON을 불러와 적용했습니다.");
+    } catch (err) {
+      toast("JSON 형식이 올바르지 않습니다: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// 버튼 바인딩
+document.getElementById("btnExportJson")?.addEventListener("click", exportCacheAsJson);
+document.getElementById("btnImportJson")?.addEventListener("click", () => {
+  document.getElementById("importJsonInput").click();
+});
+document.getElementById("importJsonInput")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (file) importCacheFromJsonFile(file);
+});
+
+  
 </script>
 </body>
 </html>
