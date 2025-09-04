@@ -334,7 +334,7 @@ async function fetchWithTimeout(url, { timeout = 10000, ...opts } = {}) {
   } finally {
     clearTimeout(timer);
   }
-} 
+}
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const modeBadge = $("#modeBadge");
@@ -517,8 +517,16 @@ function updateGroupSelectedStyles(){
 }
   // 구글샘플로드
 // 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
-async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true } = {}) {
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzlJ9j5N6EQyY-oxnB1nQHZl0c6i7LI350AdW-eS-tJgBKGaRCPEJTZzYr2mONr5vQp/exec?t=" + Date.now();
+// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
+async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true, sheet, limit = 5 } = {}) {
+  // 1) URL 구성
+  const BASE = "https://script.google.com/macros/s/AKfycbzlJ9j5N6EQyY-oxnB1nQHZl0c6i7LI350AdW-eS-tJgBKGaRCPEJTZzYr2mONr5vQp/exec";
+  const qs = new URLSearchParams();
+  if (sheet) qs.set("sheet", sheet);
+  if (limit) qs.set("limit", String(limit));
+  qs.set("t", Date.now());              // 캐시 버스터
+  const GAS_URL = `${BASE}?${qs.toString()}`;
+
   const mapToItem = (p) => ({
     name:   p?.name   || "",
     role:   p?.role   || "",
@@ -538,7 +546,13 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
   try {
     setButtonLoading(triggerBtn, true, "구글에서 불러오는 중");
 
-
+    // 2) 실제 요청 (단순 GET, 커스텀 헤더 없음 → 프리플라이트 회피)
+    const r = await fetchWithTimeout(GAS_URL, {
+      timeout: timeoutGAS,
+      method: "GET",
+      cache: "no-store",
+      credentials: "omit"
+    });
     if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
 
     const data = await mustJson(r);
@@ -546,18 +560,14 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
       throw new Error("GAS ok:false 또는 items 비어있음");
     }
 
-    // 1) 원본 캐시 저장
+    // 3) 저장
     const items = data.items.map(mapToItem);
-    savePersonasCache(items);
+    savePersonasCache(items); // 원본 캐시
 
-    // 2) 앱 저장(교체 or 병합)
     const cur = loadPersonas().map(mapToItem);
     const finalList = replace
       ? items.slice(0, 5)
-      : [...items, ...cur].reduce((acc, p) => {
-          if (!acc.find(x => x.name === p.name)) acc.push(p);
-          return acc;
-        }, []).slice(0, 5);
+      : [...items, ...cur].filter((p, i, arr) => p.name && arr.findIndex(x => x.name === p.name) === i).slice(0, 5);
 
     savePersonas(finalList);
     renderPersonaList();
@@ -566,9 +576,9 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
   } catch (err) {
     console.error("[GAS only error]", err);
 
-    // 실패 시: 캐시 폴백
+    // 4) 실패 시 캐시 폴백
     const cached = loadPersonasCache();
-    if (cached && cached.length) {
+    if (cached?.length) {
       const items = cached.map(mapToItem).slice(0, 5);
       savePersonas(items);
       renderPersonaList();
