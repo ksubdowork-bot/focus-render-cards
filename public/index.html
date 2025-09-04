@@ -514,16 +514,23 @@ function updateGroupSelectedStyles(){
     }
   });
 }
-  // 구글샘플로드
-// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
-// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백
-async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = true, sheet, limit = 5 } = {}) {
-  // 1) URL 구성
+
+
+
+  
+// 구글 시트만 호출 + 성공 시 캐시, 실패 시 캐시 폴백 (디버그 강화판)
+async function loadSamplePersonas(triggerBtn, {
+  timeoutGAS = 12000,
+  replace = true,
+  sheet,
+  limit = 5
+} = {}) {
+  // 1) URL 구성 (★ /exec 최신 배포 URL로 교체 필요)
   const BASE = "https://script.google.com/macros/s/AKfycbzlJ9j5N6EQyY-oxnB1nQHZl0c6i7LI350AdW-eS-tJgBKGaRCPEJTZzYr2mONr5vQp/exec";
   const qs = new URLSearchParams();
   if (sheet) qs.set("sheet", sheet);
   if (limit) qs.set("limit", String(limit));
-  qs.set("t", Date.now());              // 캐시 버스터
+  qs.set("t", Date.now()); // 캐시 버스터
   const GAS_URL = `${BASE}?${qs.toString()}`;
 
   const mapToItem = (p) => ({
@@ -533,30 +540,49 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
     bio:    p?.bio ?? p?.description ?? ""
   });
 
-  const mustJson = async (res) => {
+  // 응답이 JSON이든 text/plain이든 일단 받아서 파싱 시도
+  const readAsJson = async (res) => {
     const ct = (res.headers.get("content-type") || "").toLowerCase();
-    if (!ct.includes("application/json")) {
-      const preview = (await res.text()).slice(0, 160);
-      throw new Error(`GAS non-JSON. ct=${ct} preview="${preview}"`);
+    let raw;
+    try {
+      raw = await res.text();
+    } catch(e) {
+      throw new Error(`응답 바디 읽기 실패: ${e?.message || e}`);
     }
-    return res.json();
+    // 미리보기 180자
+    const preview = raw.slice(0, 180).replace(/\s+/g, " ");
+    // content-type 이 JSON이 아니더라도 JSON 파싱 시도 (일부 환경에서 text/plain으로 내려오는 경우 대비)
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new Error(`GAS가 JSON이 아닙니다. ct=${ct} preview="${preview}"`);
+    }
   };
 
   try {
     setButtonLoading(triggerBtn, true, "구글에서 불러오는 중");
 
-    // 2) 실제 요청 (단순 GET, 커스텀 헤더 없음 → 프리플라이트 회피)
+    // 2) 단순 GET (프리플라이트 회피용: 커스텀 헤더/credentials 없음)
     const r = await fetchWithTimeout(GAS_URL, {
       timeout: timeoutGAS,
       method: "GET",
       cache: "no-store",
+      // mode: "cors",  // 기본이 cors지만 명시하고 싶다면 주석 해제
       credentials: "omit"
     });
-    if (!r.ok) throw new Error(`GAS HTTP ${r.status}`);
 
-    const data = await mustJson(r);
+    // 상태/헤더 디버그
+    const statusInfo =
+      `status=${r.status}, ct="${(r.headers.get("content-type")||"").toLowerCase()}"`;
+    if (!r.ok) {
+      // 본문도 읽어 에러 표면화
+      const errText = await r.text().catch(()=>"(본문 읽기 실패)");
+      throw new Error(`GAS HTTP ${r.status}. ${statusInfo}. body="${errText.slice(0,180)}"`);
+    }
+
+    const data = await readAsJson(r);
     if (!(data?.ok && Array.isArray(data.items) && data.items.length)) {
-      throw new Error("GAS ok:false 또는 items 비어있음");
+      throw new Error(`GAS ok:false 또는 items 비어있음. ${statusInfo}`);
     }
 
     // 3) 저장
@@ -566,14 +592,17 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
     const cur = loadPersonas().map(mapToItem);
     const finalList = replace
       ? items.slice(0, 5)
-      : [...items, ...cur].filter((p, i, arr) => p.name && arr.findIndex(x => x.name === p.name) === i).slice(0, 5);
+      : [...items, ...cur]
+          .filter((p, i, arr) => p.name && arr.findIndex(x => x.name === p.name) === i)
+          .slice(0, 5);
 
     savePersonas(finalList);
     renderPersonaList();
     toast("구글 시트에서 불러왔어요." + (replace ? " (기존 교체)" : " (병합)"));
 
   } catch (err) {
-    console.error("[GAS only error]", err);
+    console.error("[GAS fetch error]", err);
+    const msg = (err && err.message) ? err.message : String(err);
 
     // 4) 실패 시 캐시 폴백
     const cached = loadPersonasCache();
@@ -581,11 +610,10 @@ async function loadSamplePersonas(triggerBtn, { timeoutGAS = 12000, replace = tr
       const items = cached.map(mapToItem).slice(0, 5);
       savePersonas(items);
       renderPersonaList();
-      toast("네트워크 오류—저장된 캐시에서 불러왔어요.");
+      toast(`원격 오류(캐시로 대체): ${msg}`);
     } else {
-      toast("구글 불러오기에 실패했고, 저장된 캐시도 없어요.");
+      toast(`구글 불러오기에 실패했고, 저장된 캐시도 없어요.\n${msg}`);
     }
-
   } finally {
     setButtonLoading(triggerBtn, false);
   }
