@@ -164,7 +164,7 @@
 
     <!-- 1) 페르소나 입력/저장 -->
     <section class="section" id="secSave">
-      <div class="sec-title">1) 페르소나 입력/저장 (최대 5명)</div>
+      <div class="sec-title">1) 페르소나 입력/저장 (최대 6명)</div>
       <div class="row">
         <div>
           <label>이름</label>
@@ -223,7 +223,7 @@
     
  <!-- 3) 그룹 대화 -->
 <section class="section" id="secGroup">
-  <div class="sec-title">3) 그룹 대화(최대 5명)</div>
+  <div class="sec-title">3) 그룹 대화(최대 4명)</div>
   <div class="hint">아래 목록에서 페르소나를 선택하세요. 선택된 페르소나가 발언합니다.</div>
 
   <div id="groupSelected" class="list-inline" style="margin:8px 0 12px;"></div>
@@ -231,12 +231,20 @@
   <div class="row">
     <div class="full">
       <label>토픽 / 과제</label>
-      <input id="groupTopic" placeholder="예: 갤럭시 팝업스토어에 간다면 무엇을 제일먼저 보고싶을까?" />
+      <input id="groupTopic" placeholder="예: 선택한 페르소나가, 갤럭시 스토어를 방문한다면 가장 먼저 체험해보고싶은 것?" />
     </div>
+ 
     <div>
       <label>라운드 수(기본 2)</label>
-      <select id="groupRounds"><option>1</option><option selected>2</option><option>3</option></select>
+<select id="groupRounds">
+  <option>1</option>
+  <option>2</option>
+  <option selected>3</option>
+  <option>4</option>
+  <option>5</option>
+</select>
     </div>
+    
     <div>
       <label>대화 컨텍스트 반영</label>
       <select id="groupLimit"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
@@ -272,11 +280,12 @@
   <div class="consent-modal">
     <h2 class="consent-title">안내 및 동의</h2>
 <p class="consent-desc">
-BX AI Focus Group App 은 페르소나를 입력하거나, 2026년 트랜드가 반영된 소비자 페르소나를 불러와 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
-본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다. 따라서 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
+  RFTM
+  BX AI Focus Group App 업데이트된 2026년 트랜드가 반영된 소비자 페르소나를 불러오거나, 직접 입력한 페르소나가 AI 모더레이터와 함께 질문·응답·토론을 진행할 수 있는 도구입니다.
+본 앱은 무선 ILP 관련 내용에 특화되어 학습되어 있습니다. 따라서 입력한 페르소나, 모더레이터의 질문과 인사이트는 무선 ILP의 경험, 기획, 오프라인 연계 중심으로 진행될 수 있습니다.
   
 사용 방법:
-1) 프로젝트에 맞는 페르소나를 직접 입력하거나, 저장된 최신 페르소나(리서치기관 정보 활용)를 선택합니다.
+1) 저장된 최신 페르소나(리서치기관 정보 활용)를 선택하거나, 프로젝트에 맞는 페르소나를 직접 입력합니다.
 2) 솔로 질문 또는 그룹 대화를 통해 원하는 주제로 AI 토론을 진행합니다. 주제/ 질문이 정확하고 구체적일 수록 좋은 인사이트를 얻을 수 있습니다.
 3) 대화 결과에서 프로젝트에 활용할 수 있는 인사이트를 얻습니다.
 
@@ -521,14 +530,14 @@ function getGroupSelected(){
   return Array.isArray(set)? set : [];
 }
 function setGroupSelected(arr){
-  sessionStorage.setItem("group.selected", JSON.stringify(arr.slice(0,6)));
+  sessionStorage.setItem("group.selected", JSON.stringify(arr.slice(0,4)));
   updateGroupSelectedStyles();
 }
 function toggleGroupPerson(name){
   let arr = getGroupSelected();
   if(arr.includes(name)) arr = arr.filter(x=>x!==name);
   else{
-    if(arr.length>=6){ toast("그룹은 최대 6명까지 선택 가능합니다."); return; }
+    if(arr.length>=4){ toast("그룹은 최대 4명까지 선택 가능합니다."); return; }
     arr.push(name);
   }
   setGroupSelected(arr);
