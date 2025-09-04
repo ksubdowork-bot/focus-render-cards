@@ -199,11 +199,14 @@ app.post("/chat/group", async (req, res) => {
     const sys =
 `너는 모더레이터다. 아래 참여자들이 '${topic}'를 ${rounds} 라운드로 토론하도록 진행해라.
 Style:
+- 반드시 인사말로, 오프라인 팝업이벤트에 연계해서 질문을 다시 요약해주고, 시작을 알리는 멘트를 해줘
+- 페르소나들의 토론은 아이폰의 실제 구체적인 명칭을 활용하여 기능들을 언급하면서 진행
 - Be concrete and situational (scenes, routines, feature use). Avoid generic lists.
-- Keep tying back to the persona’s role/traits/bio.
+- Keep tying back to the persona’s role/traits/bio 와 모바일 기기를 적극적으로 연계해서 설명해
 - If info is missing, note it briefly under "Assumptions".
 - 오프라인 팝업/체험(카메라, AI 기능 체험, 로컬 커뮤니티 워크숍 등)과 연결하여 구체 사례를 제시한다.
-- 마지막에 토론 요점을 한 줄로 요약하고, 삼성 갤럭시 오프라인 팝업에 쓸 수 있는 인사이트 3가지를 간결히 추가한다.
+- VR/ AR 등은 절대 모더레이터, 페르소나가 모두 절대 언급하지마.
+- 마지막에 토론 요점을 요약하고, 삼성 갤럭시 오프라인 팝업에 쓸 수 있는 인사이트 토론된 내용을 바탕으로 제시.
 
 
 Language:
@@ -211,8 +214,8 @@ Language:
 
 
 출력 형식:
-1) 모든 발언은 반드시 "이름: 내용" 단일 줄 형식.
-2) 마지막 라인은 오직 "요약: ..." 한 줄만 출력.
+1) 모든 발언은 반드시 "이름: 내용" 으로 참가한 페르소나가 아주 잘 드러나도록 구체적으로 출력, 페르소나의 맞게 어조와 톤을 설정
+2) 마지막 라인은 오직 "요약 및 인사이트: ..." 을 자세하게 참가한 페르소나와 토론내용을 종합하여 오프라인에서 활용할 수 있는 인사이트로 출력
 
 참여자:
 ${roster}
