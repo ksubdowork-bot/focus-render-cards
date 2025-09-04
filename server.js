@@ -6,12 +6,9 @@ if (typeof fetch === "undefined") {
   global.fetch = (await import("node-fetch")).default;
 }
 
-// ---------------------- Imports
+// ---------------------- Imports (필수만 정적 import)
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
-import compression from "compression";
-import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
@@ -23,10 +20,36 @@ const __dirname = path.dirname(__filename);
 // ---------------------- App Init
 const app = express();
 
+// --- 선택적 미들웨어 로드(없으면 no-op)
+const noop = () => (req, res, next) => next();
+
+let helmetMw = noop();
+let compressionMw = noop();
+let morganMw = noop();
+
+try {
+  const { default: helmet } = await import("helmet");
+  helmetMw = helmet({ contentSecurityPolicy: false }); // CSP는 프런트에서 관리
+} catch {
+  console.warn("[warn] helmet 미설치 – 보안 헤더 미적용(개발/임시 모드)");
+}
+try {
+  const { default: compression } = await import("compression");
+  compressionMw = compression();
+} catch {
+  console.warn("[warn] compression 미설치 – 응답 압축 미적용");
+}
+try {
+  const { default: morgan } = await import("morgan");
+  morganMw = morgan("tiny");
+} catch {
+  console.warn("[warn] morgan 미설치 – 요청 로깅 미적용");
+}
+
 // 보안/로깅/압축
-app.use(helmet({ contentSecurityPolicy: false })); // CSP는 프런트에서 관리
-app.use(compression());
-app.use(morgan("tiny"));
+app.use(helmetMw);
+app.use(compressionMw);
+app.use(morganMw);
 
 // CORS: 운영 도메인만 허용(필요시 추가)
 app.use(
@@ -146,7 +169,7 @@ function buildSoloMessages({ p, question, history = [] }) {
   return [
     system,
     frame,
-    ...history, // [{role, content}] 허용
+    ...history,
     { role: "user", content: question || "질문이 없습니다." },
   ];
 }
@@ -166,7 +189,7 @@ app.post("/persona", (req, res) => {
     description: req.body.description || "",
   };
   personas[id] = persona;
-  res.json({ ok: true, item: persona });
+  res.json({ ok: true, item: personas[id] });
 });
 
 app.put("/persona", (req, res) => {
@@ -202,9 +225,7 @@ app.post("/chat/solo", async (req, res) => {
     const pRaw = persona || personas[personaId];
     if (!pRaw) return res.status(400).json({ ok: false, error: "persona_not_found" });
 
-    const q = isNonEmptyString(question)
-      ? question.trim().slice(0, 300)
-      : "";
+    const q = isNonEmptyString(question) ? question.trim().slice(0, 300) : "";
     if (!q) return res.status(400).json({ ok: false, error: "missing_question" });
 
     const safeHistory = Array.isArray(history)
@@ -235,7 +256,8 @@ app.post("/chat/group", async (req, res) => {
       historyLimit = 20,
     } = req.body || {};
 
-    const safeRounds = clamp(parseInt(rounds, 10) || 2, 1, 6);
+    // ★ 라운드 상한 5
+    const safeRounds = clamp(parseInt(rounds, 10) || 2, 1, 5);
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
     if (!safeTopic) {
       return res.status(400).json({ ok: false, error: "missing_topic" });
@@ -246,16 +268,12 @@ app.post("/chat/group", async (req, res) => {
       picks = personaIds.slice(0, 6).map((id) => personas[id]).filter(Boolean);
     }
     if (picks.length < 2) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "need_at_least_2_personas" });
+      return res.status(400).json({ ok: false, error: "need_at_least_2_personas" });
     }
 
     const picksNorm = picks.map(normalizePersona);
     const roster = picksNorm
-      .map(
-        (p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`
-      )
+      .map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`)
       .join("\n");
 
     const sys = `
@@ -305,14 +323,8 @@ ${roster}
     let summary = "";
 
     for (const line of lines) {
-      // '요약 및 인사이트:' 혹은 '요약:' / 'summary:' 지원
-      const sumMatch = line.match(
-        /(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i
-      );
-      if (sumMatch && !summary) {
-        summary = sumMatch[2].trim();
-        continue;
-      }
+      const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
+      if (sumMatch && !summary) { summary = sumMatch[2].trim(); continue; }
       const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
       if (m && !/^(요약|summary)$/i.test(m[1].trim())) {
         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
@@ -322,9 +334,8 @@ ${roster}
     if (!summary) {
       const last = lines[lines.length - 1] || "";
       const isSpeaker = /^\s*[^:]{1,40}\s*:\s*/.test(last);
-      summary = isSpeaker
-        ? "토론이 종료되었습니다."
-        : last.replace(/^[-*\s]+/, "") || "토론이 종료되었습니다.";
+      summary = isSpeaker ? "토론이 종료되었습니다." :
+        last.replace(/^[-*\s]+/, "") || "토론이 종료되었습니다.";
     }
 
     return res.json({ ok: true, transcript, summary });
@@ -337,12 +348,10 @@ ${roster}
 
 // ---------------------- OpenAI Responses API Helper
 async function openaiChat(messages) {
-  const prompt = messages
-    .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
-    .join("\n");
+  const prompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n");
 
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25_000); // 25s timeout
+  const timer = setTimeout(() => ctrl.abort(), 25_000);
 
   try {
     const r = await fetch("https://api.openai.com/v1/responses", {
@@ -353,12 +362,7 @@ async function openaiChat(messages) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        input: [
-          {
-            role: "user",
-            content: [{ type: "input_text", text: prompt }],
-          },
-        ],
+        input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
       }),
       signal: ctrl.signal,
     });
