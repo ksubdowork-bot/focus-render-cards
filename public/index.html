@@ -114,6 +114,37 @@
       .mode-toggle{width:100%; justify-content:flex-end}
     }
   </style>
+  <script defer>
+(function () {
+  function ready(fn){
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(() => {
+    const gate  = document.getElementById('consentGate');
+    const app   = document.getElementById('appRoot');
+    const btnOk = document.getElementById('consentAccept');
+    const btnNo = document.getElementById('consentReject');
+    if (!gate || !app || !btnOk || !btnNo) return;
+
+    // 처음엔 열어둠
+    openGate();
+    btnOk.addEventListener('click', closeGate);
+    btnNo.addEventListener('click', openGate);
+
+    function openGate(){
+      gate.hidden = false;
+      gate.style.display = 'flex';
+      app.classList.add('app-disabled');
+    }
+    function closeGate(){
+      gate.hidden = true;
+      gate.style.display = 'none';
+      app.classList.remove('app-disabled');
+    }
+  });
+})();
+</script>
 </head>
 <body>
   <div id="appRoot" class="app-disabled">
@@ -291,7 +322,7 @@ function loadPersonasCache(){
   }
 }
 function savePersonas(arr){
-  const slim = arr.slice(0,5).map(p => ({
+  const slim = arr.slice(0,6).map(p => ({
     name:p.name,
     role:p.role,
     traits:p.traits,
@@ -490,7 +521,7 @@ function getGroupSelected(){
   return Array.isArray(set)? set : [];
 }
 function setGroupSelected(arr){
-  sessionStorage.setItem("group.selected", JSON.stringify(arr.slice(0,5)));
+  sessionStorage.setItem("group.selected", JSON.stringify(arr.slice(0,6)));
   updateGroupSelectedStyles();
 }
 function toggleGroupPerson(name){
@@ -747,48 +778,12 @@ $("#btnLoadSamples").addEventListener("click", (e)=>{
     force: "GAS"   // ← 이걸로 강제
   });
 });
-  $("#btnRefreshList").addEventListener("click", renderPersonaList);
-
+document.getElementById("btnRefreshList")?.addEventListener("click", renderPersonaList);
+  
 // 초기화
 modeChanged();
 renderPersonaList();
 
-/* ---------- Consent Gate (단일, 견고 버전) ---------- */
-/* ---------- Consent Gate (단일) ---------- */
-(function () {
-  function ready(fn){
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
-    else fn();
-  }
-  ready(() => {
-    const gate  = document.getElementById('consentGate');
-    const app   = document.getElementById('appRoot');
-    const btnOk = document.getElementById('consentAccept');
-    const btnNo = document.getElementById('consentReject');
-    if (!gate || !app || !btnOk || !btnNo) return;
-
-    openGate();
-    btnOk.addEventListener('click', closeGate, { passive: true });
-    btnNo.addEventListener('click', openGate,  { passive: true });
-
-    function openGate(){
-      // 화면/접근성/포인터 모두 "열림" 상태로
-      gate.hidden = false;
-      gate.style.display = 'flex';      // ✅ 확실히 보이도록
-      gate.removeAttribute('aria-hidden');
-      gate.removeAttribute('inert');
-      app.classList.add('app-disabled');
-    }
-    function closeGate(){
-      // 화면/접근성/포인터 모두 "닫힘" 상태로
-      gate.hidden = true;
-      gate.style.display = 'none';      // ✅ 눈에 보이는 잔상 제거 (Safari 등 대응)
-      gate.setAttribute('aria-hidden','true');
-      gate.setAttribute('inert','');
-      app.classList.remove('app-disabled');
-    }
-  });
-})();
 </script>
 </body>
 </html>
