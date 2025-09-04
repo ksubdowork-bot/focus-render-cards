@@ -640,7 +640,7 @@ async function loadSamplePersonas(triggerBtn, {
 
     const cur = loadPersonas().map(mapToItem);
     const finalList = replace
-      ? items.slice(0, 5)
+      ? items.slice(0, 6)
       : [...items, ...cur]
           .filter((p, i, arr) => p.name && arr.findIndex(x => x.name === p.name) === i)
           .slice(0, 5);
@@ -648,7 +648,19 @@ async function loadSamplePersonas(triggerBtn, {
     savePersonas(finalList);
     renderPersonaList();
     toast("불러오기 성공." + (replace ? "" : ""));
+requestAnimationFrame(() => {
+  const sec = document.getElementById("secSolo");
+  if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  // 첫 번째 페르소나를 자동 선택(선택값 비었을 때만)
+  const list = loadPersonas();
+  const sel = document.getElementById("soloPersonaSelect");
+  if (sel && !sel.value && list.length) sel.value = list[0].name;
+
+  // 질문 입력창 포커스
+  const q = document.getElementById("soloQuestion");
+  if (q) q.focus();
+});
   } catch (err) {
     console.error("[GAS fetch error]", err);
     const msg = (err && err.message) ? err.message : String(err);
