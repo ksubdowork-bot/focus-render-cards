@@ -647,7 +647,7 @@ async function loadSamplePersonas(triggerBtn, {
 
     savePersonas(finalList);
     renderPersonaList();
-    toast("구글 시트에서 불러왔어요." + (replace ? " (기존 교체)" : " (병합)"));
+    toast("불러오기 성공." + (replace ? "" : ""));
 
   } catch (err) {
     console.error("[GAS fetch error]", err);
@@ -661,7 +661,7 @@ async function loadSamplePersonas(triggerBtn, {
       renderPersonaList();
       toast(`원격 오류(캐시로 대체): ${msg}`);
     } else {
-      toast(`구글 불러오기에 실패했고, 저장된 캐시도 없어요.\n${msg}`);
+      toast(`불러오기 실패, 페르소나를 직접 입력하세요. \n${msg}`);
     }
   } finally {
     setButtonLoading(triggerBtn, false);
@@ -701,7 +701,7 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
   }
 
   try{
-    startEllipsis(out, "[LIVE] AI 응답 작성중");
+    startEllipsis(out, "[LIVE] AI 응답 생각 중");
     const res = await fetch("/chat/solo",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
