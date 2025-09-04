@@ -184,25 +184,28 @@
         </div>
       </div>
 
+    
       <div class="btns">
         <button class="btn primary" id="btnSavePersona">페르소나 저장</button>
         <button class="btn ghost" id="btnLoadSamples">2026트랜드 페르소나 자동입력</button>
         <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
       </div>
 
-      
-<div class="btns">
-  <button class="btn ghost" id="btnExportJson">백업 JSON 내보내기</button>
+   <!--  이것은 로컬에 저장할지말지  -->
+<!-- <div class="btns">
+  <button class="btn ghost" id="btnExportJson">파일 내보내기</button>
   <input type="file" id="importJsonInput" accept="application/json" style="display:none">
-  <button class="btn ghost" id="btnImportJson">백업 JSON 불러오기</button>
-</div>
+  <button class="btn ghost" id="btnImportJson">패르소나 불러오기</button>
+</div>  
+    
+      여기까지 -->
+    
 
       <div class="hint">* 저장 후 아래 카드에서 “클릭”하면 해당 슬롯/그룹 자동 적용</div>
-
-      <div class="cards" id="personaList"></div>
+      <div class="cards" id="personaList"></div> 
     </section>
     
-<!-- 2) 솔로 대화 -->
+<!-- 2) 솔로 대화  -->
 <section class="section" id="secSolo">
   <div class="sec-title">2) 솔로 질문 </div>
   <div class="row">
@@ -224,7 +227,6 @@
   <div class="btns">
     <button class="btn primary" id="btnAskSolo">질문하기</button>
   </div>
-  <!-- ✅ 하나만 남기고 aria 속성 추가 -->
   <div id="soloAnswer" class="answer" style="margin-top:12px; display:none;" aria-live="polite" aria-atomic="true"></div>
 </section>
     
