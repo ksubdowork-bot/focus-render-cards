@@ -14,10 +14,7 @@ import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 
 // ---- Remote style/background (optional, Google Sheets via GAS)
-//const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
-
-const CONFIG_URL = process.env.CONFIG_URL || "";   // 연동을 켜고 싶을 때만 넣기
-
+const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
 
 
 const CONFIG_TTL_MS = 5 * 60 * 1000;               // 5분 캐시
@@ -46,6 +43,19 @@ async function tryFetchConfig(force = false) {
   }
 }
 const pickLang = (obj, lang = "ko") => (obj ? obj[lang] ?? obj.any ?? "" : "");
+// 쉼표로 병합 + 공백 정리 + 중복 제거
+function mergeCsv(...parts) {
+  return Array.from(
+    new Set(
+      parts
+        .filter(Boolean)
+        .join(",")
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean)
+    )
+  ).join(", ");
+}
 
 
 
@@ -176,16 +186,22 @@ async function buildSoloMessages({ p, question, history = [] }) {
   let anti = "모호어, AR/VR, 외부 사실 임의 추가";
   let kpiDefaults = "체류 시간, 재참여율";
 
-  // Google Sheets 연동이 켜져 있고 호출 성공한 경우에만 덮어쓰기
-  const cfg = await tryFetchConfig(); // 실패/null이면 그대로 하드코딩 유지
-  if (cfg) {
-    background   = pickLang(cfg["background.core"], "ko") || background;
-    styleExtra   = pickLang(cfg["style.solo"], "ko")       || styleExtra;
-    anti         = pickLang(cfg["anti_patterns"], "ko")    || anti;
-    const kpiArr = (cfg["kpi.defaults"]?.any || []);
-    if (Array.isArray(kpiArr) && kpiArr.length) kpiDefaults = kpiArr.join(", ");
-  }
+    // Google Sheets 연동이 켜져 있고 호출 성공한 경우에만 병합
+    const cfg = await tryFetchConfig();
+    if (cfg) {
+      const bgNew    = pickLang(cfg["background.core"], "ko");
+      const styleNew = pickLang(cfg["style.solo"], "ko");
+      const antiNew  = pickLang(cfg["anti_patterns"], "ko");
+      const kpiArr   = (cfg["kpi.defaults"]?.any || []);
 
+      background   = mergeCsv(background, bgNew);
+      styleExtra   = mergeCsv(styleExtra, styleNew);
+      anti         = mergeCsv(anti, antiNew);
+      if (Array.isArray(kpiArr) && kpiArr.length) {
+        kpiDefaults = mergeCsv(kpiDefaults, ...kpiArr);
+      }
+    }
+    
   const system = {
     role: "system",
     content: `
@@ -316,7 +332,9 @@ app.post("/chat/solo", async (req, res) => {
       ? history.slice(-Math.max(0, Number(historyLimit) || 0))
       : [];
 
-    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });    const text = await openaiChat(messages);
+      const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });
+      const text = await openaiChat(messages);
+      
     return res.json({ ok: true, answer: text });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
@@ -358,15 +376,29 @@ app.post("/chat/group", async (req, res) => {
     const roster = picksNorm
       .map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`)
       .join("\n");
-// 연동 성공시에만 사용, 실패/null이면 아무것도 안 붙음
-const cfg = await tryFetchConfig();
-const _bg    = cfg ? (pickLang(cfg["background.core"], "ko") || "") : "";
-const _styGp = cfg ? (pickLang(cfg["style.group"], "ko") || "") : "";
-const _anti  = cfg ? (pickLang(cfg["anti_patterns"], "ko") || "모호어, AR/VR, 외부 사실 임의 추가") : "모호어, AR/VR, 외부 사실 임의 추가";
-const _kpis  = cfg && Array.isArray(cfg["kpi.defaults"]?.any) && cfg["kpi.defaults"].any.length
-  ? cfg["kpi.defaults"].any.join(", ")
-  : "체류 시간, 재방문율";
-    
+     
+      // 기본값
+      let _bg    = "";
+      let _styGp = "";
+      let _anti  = "모호어, AR/VR, 외부 사실 임의 추가";
+      let _kpis  = "체류 시간, 재방문율";
+
+      // 연동 성공 시 병합
+      const cfg = await tryFetchConfig();
+      if (cfg) {
+        const bgNew    = pickLang(cfg["background.core"], "ko");
+        const styNew   = pickLang(cfg["style.group"], "ko");
+        const antiNew  = pickLang(cfg["anti_patterns"], "ko");
+        const kpiArr   = (cfg["kpi.defaults"]?.any || []);
+
+        _bg    = mergeCsv(_bg, bgNew);
+        _styGp = mergeCsv(_styGp, styNew);
+        _anti  = mergeCsv(_anti, antiNew);
+        if (Array.isArray(kpiArr) && kpiArr.length) {
+          _kpis = mergeCsv(_kpis, ...kpiArr);
+        }
+      }
+      
     const sys = `
 ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
 ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
