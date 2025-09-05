@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 
 // ---- Remote style/background (optional, Google Sheets via GAS)
-const CONFIG_URL = process.env.CONFIG_URL || "";   // 연동을 켜고 싶을 때만 넣기
+const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
 const CONFIG_TTL_MS = 5 * 60 * 1000;               // 5분 캐시
 let CONFIG_CACHE = { data: null, fetchedAt: 0 };
 
