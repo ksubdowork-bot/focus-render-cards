@@ -13,6 +13,37 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 
+// ---- Remote style/background (optional, Google Sheets via GAS)
+const CONFIG_URL = process.env.CONFIG_URL || "";   // 연동을 켜고 싶을 때만 넣기
+const CONFIG_TTL_MS = 5 * 60 * 1000;               // 5분 캐시
+let CONFIG_CACHE = { data: null, fetchedAt: 0 };
+
+async function tryFetchConfig(force = false) {
+  if (!CONFIG_URL) return null;                    // URL 없으면 연동 비활성(하드코딩 유지)
+  const now = Date.now();
+  if (!force && CONFIG_CACHE.data && now - CONFIG_CACHE.fetchedAt < CONFIG_TTL_MS) {
+    return CONFIG_CACHE.data;
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(CONFIG_URL, { signal: ctrl.signal });
+    if (!r.ok) throw new Error("config_http_" + r.status);
+    const j = await r.json();
+    if (!j?.ok || !j?.config) throw new Error("config_bad_payload");
+    CONFIG_CACHE = { data: j.config, fetchedAt: now };
+    return j.config;
+  } catch (_) {
+    // 실패: null로 폴백(하드코딩 사용)
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+const pickLang = (obj, lang = "ko") => (obj ? obj[lang] ?? obj.any ?? "" : "");
+
+
+
 // ---------------------- Paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,12 +156,30 @@ function normalizePersona(p = {}) {
   return { ...p, bio: p.bio ?? p.description ?? "" };
 }
 
-// Solo 메시지 빌더
-function buildSoloMessages({ p, question, history = [] }) {
+// Solo 메시지 빌더 (연동 성공시에만 시트값 주입, 실패/비활성 시 하드코딩만 사용)
+async function buildSoloMessages({ p, question, history = [] }) {
   const persona = normalizePersona(p);
+
+  // 기본(하드코딩) 블록
+  let background = "";
+  let styleExtra = "";
+  let anti = "모호어, AR/VR, 외부 사실 임의 추가";
+  let kpiDefaults = "체류 시간, 재참여율";
+
+  // Google Sheets 연동이 켜져 있고 호출 성공한 경우에만 덮어쓰기
+  const cfg = await tryFetchConfig(); // 실패/null이면 그대로 하드코딩 유지
+  if (cfg) {
+    background   = pickLang(cfg["background.core"], "ko") || background;
+    styleExtra   = pickLang(cfg["style.solo"], "ko")       || styleExtra;
+    anti         = pickLang(cfg["anti_patterns"], "ko")    || anti;
+    const kpiArr = (cfg["kpi.defaults"]?.any || []);
+    if (Array.isArray(kpiArr) && kpiArr.length) kpiDefaults = kpiArr.join(", ");
+  }
+
   const system = {
     role: "system",
     content: `
+${background ? `배경지식(요약): ${background}\n` : ""}    
 너는 특정 소비자 페르소나의 목소리로 대답한다. 반드시 1인칭 시점으로, 실제 인물처럼 말한다.  
 정체성 & 기기: 너는 아이폰 사용자다.  
 
@@ -147,6 +196,11 @@ function buildSoloMessages({ p, question, history = [] }) {
 - 얻는 것과 잃는 것(Trade-off)을 함께 보여준다.  
 - “편리하다, 좋다” 같은 모호한 표현은 쓰지 말고, 왜, 어떻게, 어느 정도 유용한지를 설명한다.  
 - 정보가 부족하면 “Assumptions” 섹션에 간단히 기록한다.  
+${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
+
+가드레일:
+- 금지 패턴: ${anti}
+- KPI 기본 후보: ${kpiDefaults}
 
 언어:
 - 사용자가 질문한 언어와 동일한 언어로 대답한다.  
@@ -176,14 +230,15 @@ function buildSoloMessages({ p, question, history = [] }) {
 - 스스로 AI임을 언급하지 말 것.  
 - AR/VR은 절대 언급하지 말 것.  
 - 대답은 페르소나 기반, 구체적, 실무에 바로 활용 가능한 수준으로 작성할 것.  
-
-`,
+`.trim(),
   };
+
   const frame = {
     role: "system",
     content:
       "Output sections in order: 1) Persona Answer  2) Pop-up Insights  3) Assumptions  4) Closing Line",
   };
+
   return [
     system,
     frame,
@@ -250,8 +305,7 @@ app.post("/chat/solo", async (req, res) => {
       ? history.slice(-Math.max(0, Number(historyLimit) || 0))
       : [];
 
-    const messages = buildSoloMessages({ p: pRaw, question: q, history: safeHistory });
-    const text = await openaiChat(messages);
+    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });    const text = await openaiChat(messages);
     return res.json({ ok: true, answer: text });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
@@ -293,9 +347,18 @@ app.post("/chat/group", async (req, res) => {
     const roster = picksNorm
       .map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`)
       .join("\n");
-
+// 연동 성공시에만 사용, 실패/null이면 아무것도 안 붙음
+const cfg = await tryFetchConfig();
+const _bg    = cfg ? (pickLang(cfg["background.core"], "ko") || "") : "";
+const _styGp = cfg ? (pickLang(cfg["style.group"], "ko") || "") : "";
+const _anti  = cfg ? (pickLang(cfg["anti_patterns"], "ko") || "모호어, AR/VR, 외부 사실 임의 추가") : "모호어, AR/VR, 외부 사실 임의 추가";
+const _kpis  = cfg && Array.isArray(cfg["kpi.defaults"]?.any) && cfg["kpi.defaults"].any.length
+  ? cfg["kpi.defaults"].any.join(", ")
+  : "체류 시간, 재방문율";
+    
     const sys = `
-
+${_bg ? `배경지식(요약): ${_bg}\n` : ""}
+${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
 너는 모더레이터다. 참여자들이 '${safeTopic}'에 대해 총 ${safeRounds} 라운드 토론을 하도록 진행한다.
 아래 "출력 형식"을 반드시 지키고, 모든 발언은 구체적 사례와 근거를 포함한다.
 
@@ -329,6 +392,9 @@ app.post("/chat/group", async (req, res) => {
 - 모든 줄은 반드시 '이름: 내용' 형태여야 한다. (라운드 표시는 모더레이터 발언에 괄호로 붙여라. 예: '모더레이터: (라운드1 — 니즈) …')
 - 마지막 팝업에 활용가능한 인사이트로 끝낸다. '인사이트: …' 로 끝낸다(불릿 금지, 한 문장 또는 두 문장).
 - 참가자 이름은 페르소나 카드의 이름 그대로 사용.
+- 금지 패턴: ${_anti}
+- KPI 기본 후보: ${_kpis}
+
 
 참가자:
 ${roster}
