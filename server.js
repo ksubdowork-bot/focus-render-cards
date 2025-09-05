@@ -112,6 +112,11 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+app.get("/config-check", async (req, res) => {
+  const cfg = await tryFetchConfig();
+  res.json({ from: cfg ? "google-sheet" : "hardcoded", cfg });
+});
+
 // ---------------------- In-memory Personas (샘플)
 const personas = {
   p1: {
@@ -149,6 +154,22 @@ const personas = {
 };
 
 // ---------------------- Helpers
+async function tryFetchConfig() {
+  const url = process.env.CONFIG_URL; // Google Apps Script WebApp URL
+  if (!url) return null;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const cfg = await r.json();
+    console.log("[config] ✅ 구글시트에서 불러옴");
+    return cfg;
+  } catch (e) {
+    console.warn("[config] ⚠️ 구글시트 실패, 하드코딩 fallback 사용", e.message);
+    return null;
+  }
+}
+
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const isNonEmptyString = (s) => typeof s === "string" && s.trim().length > 0;
 
