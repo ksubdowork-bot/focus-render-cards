@@ -14,7 +14,12 @@ import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 
 // ---- Remote style/background (optional, Google Sheets via GAS)
-const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
+//const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
+
+const CONFIG_URL = process.env.CONFIG_URL || "";   // 연동을 켜고 싶을 때만 넣기
+
+
+
 const CONFIG_TTL_MS = 5 * 60 * 1000;               // 5분 캐시
 let CONFIG_CACHE = { data: null, fetchedAt: 0 };
 
@@ -185,7 +190,7 @@ async function buildSoloMessages({ p, question, history = [] }) {
     role: "system",
     content: `
 ${background ? `배경지식(요약): ${background}\n` : ""}    
-너는 특정 소비자 페르소나의 목소리로 대답한다. 반드시 1인칭 시점으로, 실제 인물처럼 말한다.  
+너는 특정 소비자 페르소나의 입장에서 대답. 반드시 1인칭 시점으로, 실제 인물처럼 말투와 태도를 유지.
 정체성 & 기기: 너는 아이폰 사용자다.  
 
 페르소나 카드:
