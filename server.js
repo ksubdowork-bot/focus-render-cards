@@ -448,45 +448,43 @@ ${roster}
       { role: "user", content: "토론을 시작해." },
     ]);
 
-    // 파싱
-  const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-  const transcript = [];
-  let summary = "";               // 폴백 문구를 기본값으로 두지 말고 비워둠
-  const insights = [];            // 인사이트 라인 수집
+// 파싱
+const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+const transcript = [];
+let summary = "";               // 폴백 문구를 기본값으로 두지 말고 비워둠
+const insights = [];            // 인사이트 라인 수집
 
-    for (const line of lines) {
-        // 1) 요약 라인 우선 매칭
-      const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
-      if (sumMatch && !summary) { summary = sumMatch[2].trim(); continue; }
+for (const line of lines) {
+  // 1) 요약 라인 우선 매칭
+  const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
+  if (sumMatch && !summary) { summary = sumMatch[2].trim(); continue; }
 
-      // 2) 인사이트 라인 수집 (요약 부재 시 대체용)
-      const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
-      if (insightMatch) { insights.push(insightMatch[1].trim()); continue; }
+  // 2) 인사이트 라인 수집 (요약 부재 시 대체용)
+  const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
+  if (insightMatch) { insights.push(insightMatch[1].trim()); continue; }
 
-      // 3) 일반 발화 라인
-      const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
-      if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
-         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
-       }
-     }
-    }
-
-    // 4) 요약이 여전히 없으면, 인사이트들을 요약으로 대체
-    if (!summary && insights.length) {
-      summary = insights.join(" / ");
-    }
-    // 5) 그래도 없으면 최소 폴백
-    if (!summary) {
-      summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
-    }
-
-    return res.json({ ok: true, transcript, summary });
-  } catch (e) {
-    const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
-    console.error("group error:", e);
-    res.status(code).json({ ok: false, error: String(e.message || e) });
+  // 3) 일반 발화 라인
+  const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
+  if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
+    transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
   }
-});
+}
+
+// 4) 요약이 여전히 없으면, 인사이트들을 요약으로 대체
+if (!summary && insights.length) {
+  summary = insights.join(" / ");
+}
+// 5) 그래도 없으면 최소 폴백
+if (!summary) {
+  summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
+}
+
+return res.json({ ok: true, transcript, summary });
+} catch (e) {
+  const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
+  console.error("group error:", e);
+  res.status(code).json({ ok: false, error: String(e.message || e) });
+}
 
 // ---------------------- OpenAI Responses API Helper
 async function openaiChat(messages) {
