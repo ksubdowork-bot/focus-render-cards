@@ -429,7 +429,9 @@ ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
 
 출력 형식(파서 호환):
 - 모든 줄은 반드시 '이름: 내용' 형태여야 한다. (라운드 표시는 모더레이터 발언에 괄호로 붙여라. 예: '모더레이터: (라운드1 — 질문정의 및 오프닝) …')
-- 마지막 팝업에 활용가능한 인사이트로 끝낸다. '인사이트: …' 로 끝낸다(불릿 금지, 한 문장 또는 두 문장으로 내용 요약이 목적이 아닌 인사이트 도출이 목적임)
+- 마지막 두 줄은 반드시 아래 **순서대로** 출력:
+1) `인사이트: …` (블렛포인트)
+2) `요약: …` (한 줄, 핵심만 압축)
 - 참가자 이름은 페르소나 카드의 이름 그대로 사용.
 - 마자막 요약에서는 활용 가능한 인사이트를 블렛포인트로 정리
 - 금지 패턴: ${_anti}
@@ -447,24 +449,35 @@ ${roster}
     ]);
 
     // 파싱
-    const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    const transcript = [];
-    let summary = "마자막 요약에서는 활용 가능한 인사이트를 블렛포인트로 정리";
+  const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const transcript = [];
+  let summary = "";               // 폴백 문구를 기본값으로 두지 말고 비워둠
+  const insights = [];            // 인사이트 라인 수집
 
     for (const line of lines) {
+        // 1) 요약 라인 우선 매칭
       const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
       if (sumMatch && !summary) { summary = sumMatch[2].trim(); continue; }
+
+      // 2) 인사이트 라인 수집 (요약 부재 시 대체용)
+      const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
+      if (insightMatch) { insights.push(insightMatch[1].trim()); continue; }
+
+      // 3) 일반 발화 라인
       const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
-      if (m && !/^(summary)$/i.test(m[1].trim())) {
-        transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
-      }
+      if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
+         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
+       }
+     }
     }
 
+    // 4) 요약이 여전히 없으면, 인사이트들을 요약으로 대체
+    if (!summary && insights.length) {
+      summary = insights.join(" / ");
+    }
+    // 5) 그래도 없으면 최소 폴백
     if (!summary) {
-      const last = lines[lines.length - 1] || "";
-      const isSpeaker = /^\s*[^:]{1,40}\s*:\s*/.test(last);
-      summary = isSpeaker ? "토론이 종료되었습니다." :
-        last.replace(/^[-*\s]+/, "") || "토론이 종료되었습니다.";
+      summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
     }
 
     return res.json({ ok: true, transcript, summary });
