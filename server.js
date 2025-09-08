@@ -334,12 +334,12 @@ app.post("/chat/solo", async (req, res) => {
       const text = await openaiChat(messages);
       
     return res.json({ ok: true, answer: text });
-} catch (e) {
-  const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
-  console.error("solo error:", e);
-  res.status(code).json({ ok: false, error: String(e.message || e) });
-});
-
+  } catch (e) {
+    const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
+    console.error("solo error:", e);  // 라벨 수정
+    res.status(code).json({ ok: false, error: String(e.message || e) });
+  }
+}); 
 // ---------------------- GROUP Chat
 app.post("/chat/group", async (req, res) => {
   try {
