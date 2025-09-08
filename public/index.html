@@ -612,7 +612,7 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
   out.style.display = "block";
 
   try{
-    startEllipsis(out, "똘똘하게 말하고 싶어서 생각중");
+    startEllipsis(out, "진심으로 진지하게 생각중");
     const res = await fetch("/chat/solo",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },

@@ -171,10 +171,7 @@ const personas = {
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const isNonEmptyString = (s) => typeof s === "string" && s.trim().length > 0;
-
-function normalizePersona(p = {}) {
-  return { ...p, bio: p.bio ?? p.description ?? "" };
-}
+const normalizePersona = (p = {}) => ({ ...p, bio: p.bio ?? p.description ?? "" });
 
 // Solo 메시지 빌더 (연동 성공시에만 시트값 주입, 실패/비활성 시 하드코딩만 사용)
 async function buildSoloMessages({ p, question, history = [] }) {
@@ -186,21 +183,17 @@ async function buildSoloMessages({ p, question, history = [] }) {
   let anti = "모호어, AR";
   let kpiDefaults = "체류 시간, 재참여율";
 
-    // Google Sheets 연동이 켜져 있고 호출 성공한 경우에만 병합
-    const cfg = await tryFetchConfig();
-    if (cfg) {
-      const bgNew    = pickLang(cfg["background.core"], "ko");
-      const styleNew = pickLang(cfg["style.solo"], "ko");
-      const antiNew  = pickLang(cfg["anti_patterns"], "ko");
-      const kpiArr   = (cfg["kpi.defaults"]?.any || []);
-
-      background   = mergeCsv(background, bgNew);
-      styleExtra   = mergeCsv(styleExtra, styleNew);
-      anti         = mergeCsv(anti, antiNew);
-      if (Array.isArray(kpiArr) && kpiArr.length) {
-        kpiDefaults = mergeCsv(kpiDefaults, ...kpiArr);
-      }
-    }
+  const cfg = await tryFetchConfig();
+  if (cfg) {
+    const bgNew = pickLang(cfg["background.core"], "ko");
+    const styleNew = pickLang(cfg["style.solo"], "ko");
+    const antiNew = pickLang(cfg["anti_patterns"], "ko");
+    const kpiArr = cfg["kpi.defaults"]?.any || [];
+    background = mergeCsv(background, bgNew);
+    styleExtra = mergeCsv(styleExtra, styleNew);
+    anti = mergeCsv(anti, antiNew);
+    if (Array.isArray(kpiArr) && kpiArr.length) kpiDefaults = mergeCsv(kpiDefaults, ...kpiArr);
+  }
     
   const system = {
     role: "system",
@@ -209,7 +202,8 @@ ${background ? `배경지식(요약): ${background}\n` : ""}
 받은 질문을 요약하여, 되물으면서 답변을 시작한다.
 너는 특정 소비자 페르소나의 입장에서 대답.
 ${persona.role} 에 입력된 기기의 기능 및 기능명을 완전히 숙지하고 답변한다.
-${persona.bio} 반드시 1인칭 시점으로, 실제 인물처럼 말투와 태도를 설정하고 해당 설정을 유지, 모든 답변은 ${persona.bio}의 성향 및 내용과 연관된 예시를 들어 대답한다.
+${persona.bio} 반드시 1인칭 시점으로, 실제 인물처럼 말투와 태도를 설정하고 해당 설정을 유지, 모든 답변은
+${persona.bio}의 성향 및 내용과 연관된 예시를 들어 대답한다.
 너는 전시, 팝업 이벤트, 브랜딩에 관심이 많다.
 
 
@@ -272,10 +266,8 @@ ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
   ];
 }
 
-// ---------------------- Personas CRUD (옵셔널)
-app.get("/personas-list", (req, res) => {
-  res.json({ ok: true, items: Object.values(personas) });
-});
+
+app.get("/personas-list", (req, res) => res.json({ ok: true, items: Object.values(personas) }));
 
 app.post("/persona", (req, res) => {
   const id = req.body.id || uuidv4();
@@ -292,16 +284,14 @@ app.post("/persona", (req, res) => {
 
 app.put("/persona", (req, res) => {
   const id = req.body.id;
-  if (!id || !personas[id])
-    return res.status(404).json({ ok: false, error: "not_found" });
+  if (!id || !personas[id]) return res.status(404).json({ ok: false, error: "not_found" });
   personas[id] = { ...personas[id], ...req.body };
   res.json({ ok: true, item: personas[id] });
 });
 
 app.delete("/persona/:id", (req, res) => {
   const { id } = req.params;
-  if (!personas[id])
-    return res.status(404).json({ ok: false, error: "not_found" });
+  if (!personas[id]) return res.status(404).json({ ok: false, error: "not_found" });
   delete personas[id];
   res.json({ ok: true });
 });
@@ -309,92 +299,63 @@ app.delete("/persona/:id", (req, res) => {
 // ---------------------- SOLO Chat
 app.post("/chat/solo", async (req, res) => {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ ok: false, error: "missing_api_key" });
-    }
-    const {
-      persona,
-      personaId,
-      question = "",
-      historyLimit = 20,
-      history = [],
-    } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
 
+    const { persona, personaId, question = "", historyLimit = 20, history = [] } = req.body || {};
     const pRaw = persona || personas[personaId];
     if (!pRaw) return res.status(400).json({ ok: false, error: "persona_not_found" });
 
     const q = isNonEmptyString(question) ? question.trim().slice(0, 300) : "";
     if (!q) return res.status(400).json({ ok: false, error: "missing_question" });
 
-    const safeHistory = Array.isArray(history)
-      ? history.slice(-Math.max(0, Number(historyLimit) || 0))
-      : [];
-
-      const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });
-      const text = await openaiChat(messages);
-      
+    const safeHistory = Array.isArray(history) ? history.slice(-Math.max(0, Number(historyLimit) || 0)) : [];
+    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });
+    const text = await openaiChat(messages);
     return res.json({ ok: true, answer: text });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
-    console.error("solo error:", e);  // 라벨 수정
-    res.status(code).json({ ok: false, error: String(e.message || e) });
+    console.error("solo error:", e);
+    return res.status(code).json({ ok: false, error: String(e.message || e) });
   }
-}); 
+});
+
 // ---------------------- GROUP Chat
 app.post("/chat/group", async (req, res) => {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ ok: false, error: "missing_api_key" });
-    }
-    const {
-      personas: pObjs = [],
-      personaIds = [],
-      topic = "",
-      rounds = 2,
-      historyLimit = 20,
-    } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
 
-    // ★ 라운드 상한 5
+    const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20 } = req.body || {};
+
     const safeRounds = clamp(parseInt(rounds, 10) || 2, 1, 5);
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
-    if (!safeTopic) {
-      return res.status(400).json({ ok: false, error: "missing_topic" });
-    }
+    if (!safeTopic) return res.status(400).json({ ok: false, error: "missing_topic" });
 
     let picks = Array.isArray(pObjs) ? pObjs.slice(0, 6) : [];
     if (!picks.length && Array.isArray(personaIds) && personaIds.length) {
       picks = personaIds.slice(0, 6).map((id) => personas[id]).filter(Boolean);
     }
-    if (picks.length < 2) {
-      return res.status(400).json({ ok: false, error: "need_at_least_2_personas" });
-    }
+    if (picks.length < 2) return res.status(400).json({ ok: false, error: "need_at_least_2_personas" });
 
     const picksNorm = picks.map(normalizePersona);
-    const roster = picksNorm
-      .map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`)
-      .join("\n");
-     
-      // 기본값
-      let _bg    = "";
-      let _styGp = "";
-      let _anti  = "모호어, AR/VR, 외부 사실 임의 추가";
-      let _kpis  = "체류 시간, 재방문율";
+    const roster = picksNorm.map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`).join("\n");
 
-      // 연동 성공 시 병합
-      const cfg = await tryFetchConfig();
-      if (cfg) {
-        const bgNew    = pickLang(cfg["background.core"], "ko");
-        const styNew   = pickLang(cfg["style.group"], "ko");
-        const antiNew  = pickLang(cfg["anti_patterns"], "ko");
-        const kpiArr   = (cfg["kpi.defaults"]?.any || []);
+    let _bg = "";
+    let _styGp = "";
+    let _anti = "모호어, AR/VR, 외부 사실 임의 추가";
+    let _kpis = "체류 시간, 재방문율";
 
-        _bg    = mergeCsv(_bg, bgNew);
-        _styGp = mergeCsv(_styGp, styNew);
-        _anti  = mergeCsv(_anti, antiNew);
-        if (Array.isArray(kpiArr) && kpiArr.length) {
-          _kpis = mergeCsv(_kpis, ...kpiArr);
-        }
-      }
+    const cfg = await tryFetchConfig();
+    if (cfg) {
+      const bgNew = pickLang(cfg["background.core"], "ko");
+      const styNew = pickLang(cfg["style.group"], "ko");
+      const antiNew = pickLang(cfg["anti_patterns"], "ko");
+      const kpiArr = cfg["kpi.defaults"]?.any || [];
+      _bg = mergeCsv(_bg, bgNew);
+      _styGp = mergeCsv(_styGp, styNew);
+      _anti = mergeCsv(_anti, antiNew);
+      if (Array.isArray(kpiArr) && kpiArr.length) _kpis = mergeCsv(_kpis, ...kpiArr);
+    }
+
       
     const sys = `
 ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
@@ -440,58 +401,51 @@ ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
 참가자:
 ${roster}
 (최근 컨텍스트 ${historyLimit}개 사용)
-`;
+`.trim();
 
     const text = await openaiChat([
       { role: "system", content: sys },
       { role: "user", content: "토론을 시작해." },
     ]);
 
-// 파싱
-const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-const transcript = [];
-let summary = "";               // 폴백 문구를 기본값으로 두지 말고 비워둠
-const insights = [];            // 인사이트 라인 수집
+    const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const transcript = [];
+    let summary = "";
+    const insights = [];
 
-for (const line of lines) {
-  // 1) 요약 라인 우선 매칭
-  const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
-  if (sumMatch && !summary) { summary = sumMatch[2].trim(); continue; }
+    for (const line of lines) {
+      const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
+      if (sumMatch && !summary) {
+        summary = sumMatch[2].trim();
+        continue;
+      }
+      const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
+      if (insightMatch) {
+        insights.push(insightMatch[1].trim());
+        continue;
+      }
+      const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
+      if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
+        transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
+      }
+    }
 
-  // 2) 인사이트 라인 수집 (요약 부재 시 대체용)
-  const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
-  if (insightMatch) { insights.push(insightMatch[1].trim()); continue; }
+    if (!summary && insights.length) summary = insights.join(" / ");
+    if (!summary) summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
 
-  // 3) 일반 발화 라인
-  const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
-  if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
-    transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
+    return res.json({ ok: true, transcript, summary });
+  } catch (e) {
+    const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
+    console.error("group error:", e);
+    return res.status(code).json({ ok: false, error: String(e.message || e) });
   }
-}
-
-// 4) 요약이 여전히 없으면, 인사이트들을 요약으로 대체
-if (!summary && insights.length) {
-  summary = insights.join(" / ");
-}
-// 5) 그래도 없으면 최소 폴백
-if (!summary) {
-  summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
-}
-
-return res.json({ ok: true, transcript, summary });
-} catch (e) {
-  const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
-  console.error("group error:", e);
-  res.status(code).json({ ok: false, error: String(e.message || e) });
 });
 
 // ---------------------- OpenAI Responses API Helper
 async function openaiChat(messages) {
   const prompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n");
-
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30_000);
-
   try {
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -505,14 +459,12 @@ async function openaiChat(messages) {
       }),
       signal: ctrl.signal,
     });
-
     if (!r.ok) {
       const t = await r.text().catch(() => "");
       const err = new Error("openai_error " + (t.slice(0, 400) || r.status));
       err.statusCode = r.status;
       throw err;
     }
-
     const data = await r.json();
     return (
       data.output_text ??
