@@ -334,11 +334,10 @@ app.post("/chat/solo", async (req, res) => {
       const text = await openaiChat(messages);
       
     return res.json({ ok: true, answer: text });
-  } catch (e) {
-    const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
-    console.error("solo error:", e);
-    res.status(code).json({ ok: false, error: String(e.message || e) });
-  }
+} catch (e) {
+  const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
+  console.error("solo error:", e);
+  res.status(code).json({ ok: false, error: String(e.message || e) });
 });
 
 // ---------------------- GROUP Chat
@@ -484,7 +483,7 @@ return res.json({ ok: true, transcript, summary });
   const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
   console.error("group error:", e);
   res.status(code).json({ ok: false, error: String(e.message || e) });
-}
+});
 
 // ---------------------- OpenAI Responses API Helper
 async function openaiChat(messages) {
