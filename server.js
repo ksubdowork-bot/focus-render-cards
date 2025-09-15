@@ -120,6 +120,14 @@ app.use(
     lastModified: true,
   })
 );
+// 언어 감지: 한글 우세면 'ko', 아니면 'en'
+function detectLang(s="") {
+  const ko = (s.match(/[\u3131-\u318F\uAC00-\uD7A3]/g) || []).length;
+  const en = (s.match(/[A-Za-z]/g) || []).length;
+  if (ko > en) return "ko";
+  if (en > 0 && en >= ko) return "en";
+  return "en";
+}
 
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -362,7 +370,7 @@ app.post("/chat/group", async (req, res) => {
     const sys = `
 ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
 ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
-반드시 질문이 한국어 일때 한국어로, 영어일때 English 로 출력한다.
+Always answer in the question's language.
 너는 모더레이터다. 참여자들이 '${safeTopic}'에 대해 총 ${safeRounds} 라운드 토론을 하도록 진행한다.
 아래 "출력 형식"을 반드시 지키고, 모든 발언은 구체적 사례와 근거를 포함한다.
 
