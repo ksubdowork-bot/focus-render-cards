@@ -155,7 +155,47 @@
         </div>
         <div class="full">
           <label>상세 설명</label>
-          <textarea id="pBio" placeholder="핵심 가치 :  시간을 최우선 자원으로 보고 업무 효율·디스트랙션 최소화를 중시. 의미 있는 경험·관계에 시간을 재투자. 시간 절약형 서비스와 렌탈·부분 소유 모델 선호(소유 대신 활용 효율), 미감·미식 감수성과 ‘삶의 품위’도 추구, Lifestyle : 월요일 싱가포르, 수요일 도쿄, 금요일 서울. 아침 공항 라운지에서 문서를 검토하고, 비행 중 아이패드로 문서 작성. 호텔 체크인 즉시 ‘업무 알림만 허용’ 프로필로 전환해 산만함을 줄인다. 출퇴근은 모빌리티 구독, 출장 중 촬영은 장비 렌탈(부분 소유)로 해결—관리 비용 대신 ‘즉시 가용성’을 산다. 출장이 많아 공유오피스·렌탈 스튜디오를 적극 활용해 ‘소유하지 않고 활용하는 삶’을 실천한다. 저녁엔 가족과 식사 약속을 고정 슬롯으로 지키고, 도시마다 미식을 즐긴다, Device Habit : S펜으로 클라이언트 피드백을 PDF에 직접 기입, S펜으로 바로 메모·수정, 멀티 테스킹, AI 기반 일정 정리와 고화질 카메라로 출장 중 문서·계약서 즉시 스캔/공유, 워치로 다양한 시차에 따른 수면질과 건강 관리, Lock-in : 워크프로세스 연결 및 주변 기기활용, 수면 스코어, 수면 코칭으로 건강기능 관리  “동시에 여러 일을 해야 하는 내 환경에서는 갤럭시의 멀티태스킹과 AI 기능이 시간을 돈처럼 지켜준다.”"></textarea>
+          <textarea id="pBio" placeholder="[핵심 특징]
+        매일 오전러닝을 하며, 건강관리 및 자기관리를 중요하게 생각함
+        혁신 추구자: 새 아이디어·스마트 디자인에 강하게 반응.
+        워라벨 지향: 디지털–피지컬 연결은 탐구하되, 삶과 일의 경계는 명확히 설정.
+         리스크테이커: 창업가적·충동적 시도, 빠른 모드 전환.
+         몰입 사용자: 앱·포커스 모드·단축어 자동화로 최적화된 생활 리듬 유지.
+
+        월요일 (출장 도착·준비)
+                •        아침 : 호텔 러닝 + 헬스 시차 체크 / Notes 아젠다 기록
+                •        낮 : FaceTime 본사 킥오프 / Safari 현지 리서치 / Notion 미팅 메모
+                •        저녁 : Keynote 초안 검토 / FaceTime 본사 보고 / 포커스 모드 / 저널 기록
+
+        화요일 (현지 협업)
+                •        아침 : 러닝 / Podcasts 업계 인사이트 청취
+                •        낮 : Zoom 현지 파트너 협의 / iCloud 자료 업로드 / Numbers 비용 추정
+                •        저녁 : Slack 피드백 / 단축어 자동화 회의록 정리 / Meditate 시차 적응 / AirPods 음악
+
+        수요일 (컨퍼런스 참석)
+                •        아침 : 러닝 / Apple Music 집중 모드
+                •        낮 : 컨퍼런스 발표 참석 / 카메라 현장 촬영 / iCloud 발표 공유
+                •        저녁 : Keynote 리허설 / 캘린더 재정렬 / Notes 인사이트 기록 / Meditate 회복
+
+        목요일 (현장 조사)
+                •        아침 : 러닝 / Safari 문화 조사
+                •        낮 : iPad UX 스케치 / Mac 시뮬레이션 / Notion 결과 정리
+                •        저녁 : 보고서 작성 / Reminders 후속 작업 / SNS 리미티드 공유 / 홈킷 자동화
+
+        금요일 (워크숍·검토)
+                •        아침 : 호텔 피트니스 러닝 / Vision Pro 협업 검토
+                •        낮 : 크로스팀 워크숍 / iPhone 스캔 계약서 / Adobe Express 요약
+                •        저녁 : Numbers 예산 결산 / Apple Pay 결제 / 프로젝트 리뷰 작성 / 오프라인 산책
+
+        토요일 (탐방·문화 체득)
+                •        아침 : 러닝 / 카메라 현지 풍경 촬영
+                •        낮 : Apple Maps 전시 탐방 / iPad Procreate 스케치 / iMovie 편집
+                •        저녁 : 문화 행사 참여 / Notes 아이디어 정리 / iCloud 공유 / Apple Books 현지 탐구
+
+        일요일 (귀국 준비·정리)
+                •        아침 : 러닝 / Reminders 귀국 체크리스트
+                •        낮 : Safari 항공·호텔 체크 / Numbers 비용 정리 / Notion 보고서 저장
+                •        저녁 : iMovie 출장 총정리 / 캘린더 귀국 일정 입력 / 포커스 모드 / 가족 FaceTime"></textarea>
         </div>
       </div>
 
@@ -514,7 +554,7 @@ async function loadSamplePersonas(triggerBtn, {
   timeoutGAS = 12000,
   replace = true,
   sheet,
-  limit = 5
+  limit = 6
 } = {}) {
   const BASE = "https://script.google.com/macros/s/AKfycbwUB7ATmDaDjuOKGrlRlTrxUuWf8yUg9_boJrGOmbr6ocqqCdS5aQf3giUKpxHLr3_e/exec";
   const qs = new URLSearchParams();

@@ -144,7 +144,7 @@ app.get("/config-check", async (req, res) => {
 const personas = {
   p1: {
     id: "p1",
-    name: "The Pioneers",
+    name: "Life Maximizers",
     role: "아이폰 16 pro",
     traits: "Doer, Spontaneous, Risk-takers, Switching Modes",
     description:
