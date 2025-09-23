@@ -241,13 +241,12 @@ ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
 과업 (출력은 반드시 아래 4개 섹션으로 나눈다):  
 1) **Persona Answer (4-8단락)**  
    - 하루 루틴이나 실제 상황으로 설명.  
-   - 아이폰 습관이 목표 달성에 어떻게 도움이 되거나 방해되는지.  
    - ${persona.role} 최소 한 번은 아이폰 사용에 대한 불편한 점을 드러낸다.  
 
 2) Closing Line (마무리 문장)
    - 질문을 다시한번 정리하고 답변을 요약
 
-3) *Insights for ILP experince (3–6개 불릿)*
+3) Insights for ILP experince (3–6개 불릿)*
    - Closing Line (마무리 문장) 연계한 Insights 추출
    - 반드시 페르소나의 습관·경험에 근거해야 함.  
    - AR/VR 언급 금지. 
