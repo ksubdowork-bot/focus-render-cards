@@ -331,7 +331,9 @@ app.post("/chat/solo", async (req, res) => {
 // ---------------------- GROUP Chat
 app.post("/chat/group", async (req, res) => {
   try {
-    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ ok: false, error: "missing_api_key" });
+    }
 
     const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20 } = req.body || {};
 
@@ -355,17 +357,16 @@ app.post("/chat/group", async (req, res) => {
 
     const cfg = await tryFetchConfig();
     if (cfg) {
-      const bgNew = pickLang(cfg["background.core"], "ko");
+      const bgNew  = pickLang(cfg["background.core"], "ko");
       const styNew = pickLang(cfg["style.group"], "ko");
       const antiNew = pickLang(cfg["anti_patterns"], "ko");
       const kpiArr = cfg["kpi.defaults"]?.any || [];
-      _bg = mergeCsv(_bg, bgNew);
+      _bg   = mergeCsv(_bg, bgNew);
       _styGp = mergeCsv(_styGp, styNew);
       _anti = mergeCsv(_anti, antiNew);
       if (Array.isArray(kpiArr) && kpiArr.length) _kpis = mergeCsv(_kpis, ...kpiArr);
     }
 
-      
     const sys = `
 ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
 ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
@@ -378,35 +379,30 @@ Always answer in the question's language.
 - 라운드 진행: 매 라운드마다 모든 참석자가 1번씩 말한다(고정 순서, 회전). 한 사람당 3-5문장.
 - 어조: 각 발언은 페르소나의 말투·취향·습관을 그대로 반영한다.
 - 금지: VR/AR 언급 금지. 외부 사실을 임의로 추가하지 말 것(제공된 페르소나 카드·대화 컨텍스트만 사용).
-- 정량화: 가능하면 수치·빈도·시간대·장소 등 구체 수치를 포함(예: “주 3회”, “평균 15분 활용”).
+- 정량화: 가능하면 수치·빈도·시간대·장소 등 구체 수치를 포함.
 - bio 를 기준으로 일화를 만들어서 자세히 설명 가능
 - 근거표기: 발언 말미에 [근거: traits 또는 bio의 핵심 단어 1~2개]를 괄호로 짧게 남긴다.
-- 탐색 심화: 모더레이터는 매 라운드마다 서로 다른 질문 프레임을 쓴다(아래 참조).
-- 갈등 다루기: 의견 충돌이 있으면 모더레이터가 즉시 재구성(“즉시성 vs 완성도” 같은 trade-off로 묶기) 후 둘 다 한 줄씩 재응답.
-- 오프라인 전환: 모든 라운드에서 ‘갤럭시 ILP (Integrated Launching Platform’)에 반영할만한 구체 행동 및 체험(What/Why/How) 요소를 끼워 넣게 유도.
-- 마지막: 토론내용을 바탕으로 팝업 인사이트를 압축해서 “인사이트: …” 한 줄로만 출력한다.
+- 탐색 심화: 라운드마다 다른 질문 프레임 적용.
+- 갈등 다루기: 상충 의견은 trade-off로 재구성 후 각 1줄 재응답.
+- 오프라인 전환: 매 라운드 ILP 반영 가능한 구체 체험(What/Why/How) 유도.
+- 마지막: “인사이트: …” 한 줄만 출력.
 
-라운드별 모더레이터 프롬프트(참여자에게 질문할 때 사용):
-- (라운드1 — 질문정의 및 오프닝) "질문에 대한 답변은?" 
-- (라운드2 — 답변과 연관하여 오프라인 전환) “갤럭시 팝업에서 직접 체험해 보고 싶은 ‘한 가지 체험’과 기대 결과는?”
-- (라운드3+ — 기대효과) “현장에서 소바자가 만족하는 경우는 어떤 체험을 했을때일까? 참여자의 의견은?”
+라운드별 모더레이터 프롬프트:
+- (라운드1) "질문에 대한 답변은?"
+- (라운드2) "갤럭시 팝업에서 직접 체험해 보고 싶은 ‘한 가지 체험’과 기대 결과는?"
+- (라운드3+) "현장에서 소비자가 만족하는 경우는 어떤 체험일까?"
 
-스타일 가이드(발언 품질 바):
-- 구체적 장면(언제/어디/무엇을/왜), 실제 아이폰 기능·설정·앱 이름을 명시.
-- ‘왜 나에게 중요했는가(정서/가치)’ → ‘현장 테스트 아이디어(What/Why/How)’ 순으로 하되 단점을 포함해서 나열
-- 모호한 단어 금지: “편리함/좋음/빠름”만 쓰지 말고 구체적 기준이나 수치를 붙인다.
-- 모호한 기능설명 금지: “느낌이 좋음, 직관적임, 부드러움”만 쓰지 말고 구체적 기준이나 수치를 붙인다.
+스타일 가이드:
+- 구체적 장면(언제/어디/무엇/왜) + 실제 아이폰 기능·설정·앱 이름.
+- '왜 나에게 중요한가' → '현장 테스트 아이디어(What/Why/How)' 순서, 단점 포함.
+- 모호어 금지: 기준/수치/빈도 명시.
 
 출력 형식(파서 호환):
-- 모든 줄은 반드시 '이름: 내용' 형태여야 한다. (라운드 표시는 모더레이터 발언에 괄호로 붙여라. 예: '모더레이터: (라운드1 — 질문정의 및 오프닝) …')
-- 마지막 두 줄은 반드시 아래 **순서대로** 출력:
-1) 인사이트: … (블렛포인트)
-2) 요약: … (한 줄, 핵심만 압축)
-- 참가자 이름은 페르소나 카드의 이름 그대로 사용.
-- 마지막 요약에서는 활용 가능한 인사이트를 블렛포인트로 정리
+- 모든 줄은 '이름: 내용' 형태. 라운드 표시는 모더레이터에만 괄호로.
+- 마지막 한 줄: 인사이트: … (블렛포인트)
+- 참가자 이름은 카드와 동일.
 - 금지 패턴: ${_anti}
 - KPI 기본 후보: ${_kpis}
-
 
 참가자:
 ${roster}
@@ -420,30 +416,23 @@ ${roster}
 
     const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
     const transcript = [];
-    let summary = "";
     const insights = [];
 
     for (const line of lines) {
-      const sumMatch = line.match(/(요약(?:\s*및\s*인사이트)?|summary)\s*:\s*(.+)$/i);
-      if (sumMatch && !summary) {
-        summary = sumMatch[2].trim();
-        continue;
-      }
+      // 인사이트만 수집
       const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
       if (insightMatch) {
         insights.push(insightMatch[1].trim());
         continue;
       }
+      // 일반 대사 전사
       const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
-      if (m && !/^(요약|summary|인사이트)$/i.test(m[1].trim())) {
+      if (m && !/^(인사이트)$/i.test(m[1].trim())) {
         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
       }
     }
 
-    if (!summary && insights.length) summary = insights.join(" / ");
-    if (!summary) summary = "핵심 합의: (요약 항목이 제공되지 않았습니다)";
-
-    return res.json({ ok: true, transcript, summary });
+    return res.json({ ok: true, transcript, insights });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
     console.error("group error:", e);
