@@ -199,10 +199,18 @@
         </div>
       </div>
 
-      <div class="btns">
-        <button class="btn primary" id="btnSavePersona">페르소나 저장</button>
-        <button class="btn ghost" id="btnLoadSamples">2026트랜드 페르소나 자동입력</button>
-        <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
+      <div class="btns-bar">
+        <div class="btns-left">
+          <button class="btn primary" id="btnSavePersona">페르소나 저장</button>
+          <button class="btn ghost" id="btnLoadSamples">2026트랜드 페르소나 자동입력</button>
+          <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
+        </div>
+        <div class="btns-right">
+          <div class="mode-toggle" id="modeToggle">
+            <button class="seg active" data-mode="cxp">CXP</button>
+            <button class="seg" data-mode="emotion">감성</button>
+          </div>
+        </div>
       </div>
 
       <div class="hint">* 저장 후 아래 카드에서 “클릭”하면 해당 슬롯/그룹 자동 적용</div>

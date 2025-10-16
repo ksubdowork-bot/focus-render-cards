@@ -452,12 +452,11 @@ ${roster}
 });
 
 // ---------------------- OpenAI Responses API Helper
-async function openaiChat(messages) {
-  const prompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n");
+async function openaiChat(messages, temperature = 0.7) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30_000);
   try {
-    const r = await fetch("https://api.openai.com/v1/responses", {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -465,7 +464,8 @@ async function openaiChat(messages) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+        temperature,
+        messages,
       }),
       signal: ctrl.signal,
     });
@@ -476,12 +476,10 @@ async function openaiChat(messages) {
       throw err;
     }
     const data = await r.json();
-    return (
-      data.output_text ??
-      data.output?.[0]?.content?.[0]?.text ??
-      data.choices?.[0]?.message?.content ??
-      JSON.stringify(data)
-    );
+    return data.choices?.[0]?.message?.content?.trim() ?? JSON.stringify(data);
+  } catch (e) {
+    console.error("[openaiChat] error:", e);
+    throw e;
   } finally {
     clearTimeout(timer);
   }
