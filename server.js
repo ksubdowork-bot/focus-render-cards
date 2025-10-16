@@ -120,14 +120,6 @@ app.use(
     lastModified: true,
   })
 );
-// 언어 감지: 한글 우세면 'ko', 아니면 'en'
-function detectLang(s="") {
-  const ko = (s.match(/[\u3131-\u318F\uAC00-\uD7A3]/g) || []).length;
-  const en = (s.match(/[A-Za-z]/g) || []).length;
-  if (ko > en) return "ko";
-  if (en > 0 && en >= ko) return "en";
-  return "en";
-}
 
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -426,7 +418,7 @@ ${roster}
         continue;
       }
       // 일반 대사 전사
-      const m = line.match(/^\s*([^:]{1,40})\s*:\s*(.+)$/);
+        const m = line.match(/^\s*([^:]+?)\s*:\s*(.+)$/);
       if (m && !/^(인사이트)$/i.test(m[1].trim())) {
         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
       }
