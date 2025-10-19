@@ -68,6 +68,35 @@
       border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
       box-shadow:var(--shadow-sm); background:#f3f4f6; color:#111827;
     }
+    /* Buttons bar 우측 정렬 유틸 */
+    .btns-bar{
+      display:flex; justify-content:space-between; align-items:center;
+      gap:12px; flex-wrap:wrap; margin-top:10px;
+    }
+    .btns-left{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btns-right{ margin-left:auto; }
+
+    /* 단일 스위치 (CXP ↔ 감성) */
+    .mode-switch{
+      display:inline-flex; align-items:center; gap:10px;
+      user-select:none; cursor:pointer;
+    }
+    .mode-switch .label{
+      font-weight:700; font-size:13px; color:#374151;
+    }
+    .mode-switch .track{
+      position:relative; width:60px; height:32px;
+      background:#e5e7eb; border-radius:999px; transition:background .2s;
+      box-shadow:var(--shadow-sm);
+    }
+    .mode-switch .thumb{
+      position:absolute; top:3px; left:3px;
+      width:26px; height:26px; border-radius:50%;
+      background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.12);
+      transition:transform .2s;
+    }
+    .mode-switch[aria-checked="true"] .track{ background:#4f46e5; }
+    .mode-switch[aria-checked="true"] .thumb{ transform:translateX(28px); }
     .btn.primary{ background:var(--brand); color:#fff }
     .btn.ghost{ background:#fff }
     .btn.success{ background:var(--ok); color:#fff }
@@ -290,7 +319,7 @@
     padding:8px 0;
     border-top:1px solid #e5e7eb;">
     BX AI Focus Group App 은 ChatGPT API를 활용하여 제작되었습니다.
-	Experience Design TF · All rights reserved. · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
+    Experience Design TF · All rights reserved. · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
   </footer>
 </div>
 
@@ -311,7 +340,7 @@ BX AI Focus Group App은 Experience Design TF에서 자체 개발한, 오프라�
 ILP 이외의 프로젝트 활용 문의는 Experience Design TF로 문의 바랍니다.<a href="mailto:k.do@cheil.com">k.do@cheil.com</a>
 
 긍정적인 태도로 AI 활용을 원하실경우 동의하여 서비스를 계속 이용하실 수 있습니다.
-		
+        
 </p>
     <div class="consent-actions">
       <button id="consentReject" class="btn">취소</button>
@@ -394,6 +423,33 @@ async function fetchWithTimeout(url, { timeout = 10000, ...opts } = {}) {
 }
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+// --- 모드 토글 (CXP ↔ 감성) — 단일 스위치
+const MODE_LS_KEY = "ui.mode";
+function getMode(){
+  return (localStorage.getItem(MODE_LS_KEY) || "cxp") === "emotion" ? "emotion" : "cxp";
+}
+function setMode(mode){
+  const val = (mode === "emotion") ? "emotion" : "cxp";
+  localStorage.setItem(MODE_LS_KEY, val);
+  const sw = document.getElementById("modeSwitch");
+  if (sw) sw.setAttribute("aria-checked", String(val === "emotion"));
+  window.dispatchEvent(new CustomEvent("modechange", { detail:{ mode: val }}));
+}
+function toggleMode(){ setMode(getMode() === "cxp" ? "emotion" : "cxp"); }
+
+// 초기화 + 접근성 키보드 처리
+(function initModeSwitch(){
+  const sw = document.getElementById("modeSwitch");
+  if (!sw) return;
+  sw.setAttribute("aria-checked", String(getMode() === "emotion"));
+  sw.addEventListener("click", toggleMode);
+  sw.addEventListener("keydown", (e)=>{
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleMode(); }
+    if (e.key === "ArrowLeft")  { e.preventDefault(); setMode("cxp"); }
+    if (e.key === "ArrowRight") { e.preventDefault(); setMode("emotion"); }
+  });
+})();
 
 const LSK = "personas.v1"; // localStorage key
 let editIndex = null;
@@ -715,10 +771,15 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
 
     if (Array.isArray(data.transcript)) {
       const lines = data.transcript.map(it => `${it.speaker}: ${it.text}`).join("\n");
-      const sum = data.summary ? `\n\n요약: ${data.summary}` : "";
-      out.textContent = `${lines}${sum}`;
+      const ins = Array.isArray(data.insights) && data.insights.length
+        ? `\n\n인사이트:\n- ${data.insights.join("\n- ")}`
+        : "";
+      out.textContent = `${lines}${ins}`;
     } else {
-      out.textContent = (data.transcript || data.summary || "").trim() || "(빈 응답)";
+      const fallback = Array.isArray(data.insights)
+        ? data.insights.map(s => `- ${s}`).join("\n")
+        : (data.transcript || "");
+      out.textContent = (fallback || "").trim() || "(빈 응답)";
     }
   }catch(err){
     console.error(err);
