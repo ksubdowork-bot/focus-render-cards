@@ -16,6 +16,53 @@ import { v4 as uuidv4 } from "uuid";
 // ---- Remote style/background (optional, Google Sheets via GAS)
 const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
 
+// ---- Optional Fresh Facts (RSS/Proxy/Manual)
+// You can provide FACTS_URL (a JSON/RSS proxy endpoint that accepts ?q=&lang=&limit=)
+// or pass `facts` array from the client in each request.
+const FACTS_URL = process.env.FACTS_URL || "";  // optional
+const FACTS_TTL_MS = 3 * 60 * 1000; // 3 min
+let FACTS_CACHE = { key: "", data: null, fetchedAt: 0 };
+// ---- Helper: Optional Facts Fetcher and Renderer
+async function tryFetchFacts({ query = "", lang = "ko", limit = 6, fallback = [] } = {}) {
+  // 1) prefer explicit fallback (client-provided)
+  if (Array.isArray(fallback) && fallback.length) return fallback.slice(0, limit);
+
+  // 2) optional proxy endpoint
+  if (!FACTS_URL) return [];
+  const key = `${FACTS_URL}?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang)}&limit=${limit}`;
+  const now = Date.now();
+  if (FACTS_CACHE.key === key && FACTS_CACHE.data && (now - FACTS_CACHE.fetchedAt) < FACTS_TTL_MS) {
+    return FACTS_CACHE.data;
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(key, { signal: ctrl.signal, headers: { "accept": "application/json" } });
+    if (!r.ok) throw new Error("facts_http_" + r.status);
+    const j = await r.json().catch(() => null);
+    // Expect shape: {items:[{title, text, source, date}]}
+    const items = (j && Array.isArray(j.items)) ? j.items : [];
+    FACTS_CACHE = { key, data: items, fetchedAt: now };
+    return items.slice(0, limit);
+  } catch (_) {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function factsBlock(facts = [], lang = "ko") {
+  if (!Array.isArray(facts) || !facts.length) return "";
+  const label = lang === "en" ? "Recent facts (brief)" : "최근 근거(요약)";
+  const lines = facts.slice(0, 8).map(it => {
+    const t = (it.text || it.title || "").toString().trim();
+    const src = (it.source || "").toString().trim();
+    const d = (it.date || "").toString().trim();
+    const tail = [src, d].filter(Boolean).join(", ");
+    return `- ${t}${tail ? ` [${tail}]` : ""}`;
+  });
+  return `${label}:\n${lines.join("\n")}`;
+}
+
 
 const CONFIG_TTL_MS = 5 * 60 * 1000;               // 5분 캐시
 let CONFIG_CACHE = { data: null, fetchedAt: 0 };
@@ -130,6 +177,17 @@ function detectLang(s = "") {
   return "en";
 }
 
+// ---- Output sanitizers (avoid stale years like 2023)
+// NOTE: We intentionally avoid stale year mentions because the model can hallucinate dates;
+// if a specific year is important, it should be provided in the prompt or pulled from the sheet.
+function scrubAgingFacts(s="") {
+  if (!s) return s;
+  // Replace 19xx/20xx years with a relative phrasing
+  return String(s)
+    .replace(/\b(19|20)\d{2}\b/g, "최근")
+    .replace(/\b(19|20)\d{2}\s*년/g, "최근");
+}
+
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => {
@@ -237,7 +295,7 @@ function modeDirectives(mode = "cxp") {
 }
 
 // Solo 메시지 빌더 (연동 성공시에만 시트값 주입, 실패/비활성 시 하드코딩만 사용)
-async function buildSoloMessages({ p, question, history = [], mode = "cxp" }) {
+async function buildSoloMessages({ p, question, history = [], mode = "cxp", facts = [] }) {
   const persona = normalizePersona(p);
   const modeGuide = modeDirectives(mode).solo;
 
@@ -258,11 +316,14 @@ async function buildSoloMessages({ p, question, history = [], mode = "cxp" }) {
     anti = mergeCsv(anti, antiNew);
     if (Array.isArray(kpiArr) && kpiArr.length) kpiDefaults = mergeCsv(kpiDefaults, ...kpiArr);
   }
-    
+
+  const factsSnippet = factsBlock(facts, detectLang(question || ""));
+
   const system = {
     role: "system",
     content: `
 ${background ? `배경지식(요약): ${background}\n` : ""}    
+${factsSnippet ? `${factsSnippet}\n` : ""}
 - 반드시 질문이 한국어 일때 한국어로, 영어일때 English 로 출력한다.
 - 받은 질문을 요약하여, 되물으면서 답변을 시작한다.
 - 너는 특정 소비자 페르소나의 입장에서 대답.
@@ -286,6 +347,7 @@ ${background ? `배경지식(요약): ${background}\n` : ""}
 - “편리하다, 좋다” 같은 모호한 표현은 쓰지 말고, 왜, 어떻게, 어느 정도 유용한지를 설명한다.  
 - 정보가 부족하면 “Assumptions” 섹션에 간단히 기록한다.  
 - 모드 지침을 따를 것.
+- 실제 연도·월·통계 수치를 임의로 만들지 말 것. 질문/시트에 명시가 없으면 연도 대신 ‘최근/요즘’ 같은 상대 표현을 사용.
 ${modeGuide}
 ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
 
@@ -370,11 +432,12 @@ app.delete("/persona/:id", (req, res) => {
 });
 
 // ---------------------- SOLO Chat
+// You can pass body.facts = [{text, source, date}, ...] or set freshFacts=true and provide FACTS_URL proxy.
 app.post("/chat/solo", async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
 
-    const { persona, personaId, question = "", historyLimit = 20, history = [], mode = "cxp" } = req.body || {};
+    const { persona, personaId, question = "", historyLimit = 20, history = [], mode = "cxp", freshFacts = false, facts: factsInput = [] } = req.body || {};
     const cfgForPersona = await tryFetchConfig();
     const lang = detectLang(question || "");
     const remotePersona = personaId ? getPersonaById(cfgForPersona, personaId, lang) : null;
@@ -385,12 +448,14 @@ app.post("/chat/solo", async (req, res) => {
     if (!q) return res.status(400).json({ ok: false, error: "missing_question" });
 
     const safeHistory = Array.isArray(history) ? history.slice(-Math.max(0, Number(historyLimit) || 0)) : [];
-    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory, mode });
+    const facts = freshFacts ? await tryFetchFacts({ query: q, lang, limit: 6, fallback: factsInput }) : (Array.isArray(factsInput) ? factsInput : []);
+    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory, mode, facts });
     const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
     const text = await openaiChat(messages, temperature);
-    return res.json({ ok: true, answer: text });
+    const answer = scrubAgingFacts(text);
+    return res.json({ ok: true, answer });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
     console.error("solo error:", e);
@@ -399,13 +464,14 @@ app.post("/chat/solo", async (req, res) => {
 });
 
 // ---------------------- GROUP Chat
+// You can pass body.facts = [{text, source, date}, ...] or set freshFacts=true and provide FACTS_URL proxy.
 app.post("/chat/group", async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ ok: false, error: "missing_api_key" });
     }
 
-    const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20, mode = "cxp" } = req.body || {};
+    const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20, mode = "cxp", freshFacts = false, facts: factsInput = [] } = req.body || {};
 
     const safeRounds = clamp(parseInt(rounds, 10) || 2, 1, 5);
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
@@ -439,6 +505,9 @@ app.post("/chat/group", async (req, res) => {
       _anti = mergeCsv(_anti, antiNew);
       if (Array.isArray(kpiArr) && kpiArr.length) _kpis = mergeCsv(_kpis, ...kpiArr);
     }
+
+    const lang = detectLang(safeTopic || "");
+    const facts = freshFacts ? await tryFetchFacts({ query: safeTopic, lang, limit: 8, fallback: factsInput }) : (Array.isArray(factsInput) ? factsInput : []);
 
     const modeGuide = modeDirectives(mode).group;
     const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
@@ -489,6 +558,7 @@ app.post("/chat/group", async (req, res) => {
     const systemBase = `
   ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
   ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
+  ${facts.length ? `${factsBlock(facts, lang)}\n` : ""}
   [모드 지침]
   ${modeGuide}
 
@@ -500,6 +570,7 @@ app.post("/chat/group", async (req, res) => {
   - 한 사람당 3~5문장. 구체적 사례/앱/설정/수치 포함.
   - 각 발언 말미에 [근거: traits 또는 bio 키워드 1~2개] 표기.
   - 외부 사실 임의 추가 금지. 금지 패턴: ${_anti}. KPI 후보: ${_kpis}.
+  - 실제 연도·월·통계 수치를 임의로 만들지 말 것. 제공되지 않으면 연도 대신 ‘최근/요즘’ 같은 상대 표현 사용.
 
   출력 형식(아래 엄격 준수):
   [ROUND {n}]
@@ -558,12 +629,13 @@ app.post("/chat/group", async (req, res) => {
 
       // 모델이 모더레이터 줄을 누락했을 때 안전 보정
       if (!sawModerator) {
-        const modText =
+        let modText =
           r === 1
             ? `오늘의 주제 "${safeTopic}"를 먼저 명확히 정의하고 시작하겠습니다.`
             : (roundLabel
                 ? `${roundLabel} 주제로 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`
                 : `오늘의 주제 "${safeTopic}"를 직전 논의 기반으로 더 구체화해보겠습니다.`);
+        modText = scrubAgingFacts(modText);
         roundLines.unshift({
           speaker: "모더레이터",
           text: modText,
@@ -590,7 +662,7 @@ app.post("/chat/group", async (req, res) => {
       }
 
       // 전사 누적 + 다음 라운드 요약 업데이트
-      ordered.forEach(l => transcript.push({ speaker: l.speaker, text: l.text }));
+      ordered.forEach(l => transcript.push({ speaker: l.speaker, text: scrubAgingFacts(l.text) }));
       const brief = ordered
         .filter(l => l.speaker !== "모더레이터")
         .map(l => {
@@ -617,7 +689,7 @@ app.post("/chat/group", async (req, res) => {
 
     const insights = (insightText || "")
       .split(/\r?\n/)
-      .map(s => s.replace(/^\s*[-•]\s*/, "").trim())
+      .map(s => scrubAgingFacts(s.replace(/^\s*[-•]\s*/, "").trim()))
       .filter(Boolean)
       .slice(0, 8);
 
@@ -668,3 +740,10 @@ async function openaiChat(messages, temperature = 0.7) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
+
+// --- Quick facts-check endpoint for diagnostics
+app.get("/facts-check", async (req, res) => {
+  const lang = detectLang(String(req.query.q || ""));
+  const items = await tryFetchFacts({ query: String(req.query.q || "test"), lang, limit: Number(req.query.limit || 5) });
+  res.json({ ok: true, items });
+});
