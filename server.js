@@ -218,7 +218,7 @@ function getPersonaById(cfg, id, lang = "ko") {
 // 모드별( CXP / 감성 ) 가이드 생성
 function modeDirectives(mode = "cxp") {
   const m = String(mode || "").toLowerCase();
-  if (m === "emotion" || m === "감성") {
+  if (m === "emotion" || m === "emo" || m === "감성") {
     return {
       tag: "감성",
       solo:
@@ -386,7 +386,7 @@ app.post("/chat/solo", async (req, res) => {
 
     const safeHistory = Array.isArray(history) ? history.slice(-Math.max(0, Number(historyLimit) || 0)) : [];
     const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory, mode });
-    const temperature = (String(mode).toLowerCase() === "emotion" || mode === "감성") ? 0.8 : 0.3;
+    const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
     const text = await openaiChat(messages, temperature);
@@ -488,7 +488,7 @@ ${roster}
 (최근 컨텍스트 ${historyLimit}개 사용)
 `.trim();
 
-    const temperature = (String(mode).toLowerCase() === "emotion" || mode === "감성") ? 0.8 : 0.3;
+    const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
     const text = await openaiChat([
@@ -536,6 +536,7 @@ async function openaiChat(messages, temperature = 0.7) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         temperature,
+        max_tokens: 1200,
         messages,
       }),
       signal: ctrl.signal,
