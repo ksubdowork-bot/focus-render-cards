@@ -162,9 +162,16 @@
 <body>
   <div id="appRoot" class="app-disabled">
   <div class="wrap">
-    <h1>
-      BX AI 익스피리언스 포커스 그룹
-      <span id="modeBadge" class="badge">LIVE</span>
+    <h1 style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        BX AI 익스피리언스 포커스 그룹
+        <span id="modeBadge" class="badge">LIVE</span>
+      </div>
+      <div class="mode-switch" id="modeSwitch" role="switch" aria-checked="false" tabindex="0" aria-label="CXP / 감성 토글">
+        <span class="label left">이성(T)</span>
+        <span class="track"><span class="thumb"></span></span>
+        <span class="label right">감성(F)</span>
+      </div>
     </h1>
 
     <!-- 1) 페르소나 입력/저장 -->
@@ -236,11 +243,7 @@
           <button class="btn" id="btnCancelEdit" style="display:none">수정 취소</button>
         </div>
         <div class="btns-right">
-          <div class="mode-switch" id="modeSwitch" role="switch" aria-checked="false" tabindex="0" aria-label="CXP / 감성 토글">
-            <span class="label left">이성(T)</span>
-            <span class="track"><span class="thumb"></span></span>
-            <span class="label right">감성(F)</span>
-          </div>
+          <!-- mode-switch moved to header -->
         </div>
       </div>
 
