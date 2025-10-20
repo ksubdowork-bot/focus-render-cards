@@ -224,13 +224,13 @@ function modeDirectives(mode = "cxp") {
       solo:
         "[감성 모드]\n- 감정, 톤, 장면 묘사를 우선. 숫자/지표 언급은 최소화.\n- 실제 대화체/내적 독백 1~2문장 포함.\n- 단점이나 불편 지점이 감정에 어떤 영향을 주는지 연결해라.",
       group:
-        "[감성 모드]\n- 각 발언은 경험의 감정/톤/맥락을 3~6문장으로 묘사.\n- 수치언급 금지.\n- 실제 대화체(따옴표)나 감정, 감각위주로 표현 요소 1개 이상 포함."
+        "[감성 모드]\n- 각 발언은 경험의 감정/톤/맥락을 3~6문장으로 묘사.\n- 수치·KPI는 필요 시 1문장 이내로만 언급.\n- 실제 대화체(따옴표)나 감각(촉각/소리/빛) 요소 1개 이상 포함."
     };
   }
   return {
     tag: "CXP",
     solo:
-      "[CXP 모드]\n- 무엇(What)/왜(Why)/어떻게(How)를 명확히 구조화.\n- 실행 항목(Next actions) 1~3개를 제시.",
+      "[CXP 모드]\n- 무엇(What)/왜(Why)/어떻게(How)를 명확히 구조화.\n- 측정 가능한 지표(KPI, 빈도, 시간, 전환 등)를 포함.\n- 실행 항목(Next actions) 1~3개를 제시.",
     group:
       "[CXP 모드]\n- 각 발언은 What/Why/How + 수치/빈도 등 정량화 1개 이상 포함.\n- 현장 실험 아이템을 명시(장소/도구/검증기준)."
   };
@@ -445,12 +445,35 @@ app.post("/chat/group", async (req, res) => {
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
 
-    // 라운드별 모더레이터 질문 프레임
-    const roundFrames = [
-      '(라운드1 — 질문정의 및 오프닝) "질문에 대한 답변은?"',
-      '(라운드2 — 오프라인 전환) "갤럭시 팝업에서 직접 체험해 보고 싶은 한 가지 체험과 기대 결과는?"',
-      '(라운드3 — 기대효과) "현장에서 소비자가 만족하는 경우는 어떤 체험일까?"'
-    ];
+    // 라운드별 모더레이터 질문 프레임 (요청/시트 우선, 기본값 없음)
+    // 1) 클라이언트가 body.roundPrompts로 배열을 주면 그 값을 사용
+    // 2) 없으면 Google Sheet 설정에서 group.round_prompts(any|ko|en)을 읽어 사용
+    // 3) 그래도 없으면 **기본 문구 없이** 빈 프레임으로 두고, 이전 라운드를 근거로 자동 심화
+    function coercePrompts(v, lang = "ko") {
+      if (!v) return null;
+      // 시트에서 배열(any: [...]) 또는 문자열(줄바꿈 구분)로 올 수 있음
+      if (Array.isArray(v)) return v.map(s => String(s || "").trim()).filter(Boolean);
+      const s = typeof v === "object" ? (v[lang] ?? v.any ?? "") : String(v || "");
+      return s
+        .split(/\r?\n/)
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    const bodyPrompts = Array.isArray(req.body?.roundPrompts) ? req.body.roundPrompts : null;
+    let sheetPrompts = null;
+    if (cfg) {
+      sheetPrompts = coercePrompts(cfg["group.round_prompts"], detectLang(safeTopic || ""));
+      if (!sheetPrompts || !sheetPrompts.length) {
+        // 호환 키
+        sheetPrompts = coercePrompts(cfg["rounds.group"], detectLang(safeTopic || ""));
+      }
+    }
+
+    let roundFrames = (bodyPrompts && bodyPrompts.length ? bodyPrompts : (sheetPrompts && sheetPrompts.length ? sheetPrompts : []))
+      .slice(0, safeRounds);
+    // 라운드 수가 더 많으면 빈 문자열로 채우고(라벨 없음), 이전 라운드 맥락을 이용해 심화
+    while (roundFrames.length < safeRounds) roundFrames.push("");
 
     // 공통 system 프리앰블
     const systemBase = `
@@ -470,7 +493,7 @@ app.post("/chat/group", async (req, res) => {
 
   출력 형식(아래 엄격 준수):
   [ROUND {n}]
-  모더레이터: ({round_label}) 첫 줄에 주제를 간단히 재정의하고 시작 알림.
+  모더레이터: 첫 줄에 주제를 간단히 재정의하고, 직전 라운드 핵심을 근거로 더 구체화(심화)한다.
   ${speakerOrder.map(n => `${n}: 본인 발언`).join("\n")}
   (이외 문장/빈 줄/서두·말미 설명 금지. 인사이트 문장 출력 금지.)
   `.trim();
@@ -480,11 +503,9 @@ app.post("/chat/group", async (req, res) => {
     let runningContext = ""; // 다음 라운드를 위한 간단 요약
 
     for (let r = 1; r <= safeRounds; r++) {
-      const roundLabel = (r <= roundFrames.length) ? roundFrames[r-1] : `(라운드${r}) "이전 논의 기반으로 더 구체화해 주세요."`;
+      const roundLabel = (r <= roundFrames.length) ? (roundFrames[r-1] || "") : "";
 
-      const sys = systemBase
-        .replace("{n}", String(r))
-        .replace("{round_label}", roundLabel);
+      const sys = systemBase.replace("{n}", String(r));
 
       const ctx = runningContext ? `이전 라운드 핵심 요약: ${runningContext}` : "";
 
@@ -522,9 +543,12 @@ app.post("/chat/group", async (req, res) => {
 
       // 모델이 모더레이터 줄을 누락했을 때 안전 보정
       if (!sawModerator) {
+        const modText = roundLabel
+          ? `${roundLabel} 주제로 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`
+          : `오늘의 주제 "${safeTopic}"를 직전 논의 기반으로 더 구체화해보겠습니다.`;
         roundLines.unshift({
           speaker: "모더레이터",
-          text: `(${roundLabel}) 오늘의 주제 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`,
+          text: modText,
           round: r
         });
       }
@@ -551,7 +575,7 @@ app.post("/chat/group", async (req, res) => {
 
     // 마지막에 인사이트만 별도로 요약 (3–6 불릿)
     const insightSys = `
-  너는 모더레이터다. 답변의 내용을 3~6개 핵심 불릿으로만 출력한다.
+  너는 모더레이터다. 아래 전사에서 팝업/오프라인 적용 아이디어를 3~6개 핵심 불릿으로만 출력한다.
   - 각 불릿은 What/Why/How를 1줄에 압축.
   - AR/VR 금지, 과장 금지, 실제 실행 가능 수준.
   `.trim();
