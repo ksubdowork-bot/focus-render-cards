@@ -121,6 +121,15 @@ app.use(
   })
 );
 
+// 언어 감지: 한글 우세면 'ko', 아니면 'en'
+function detectLang(s = "") {
+  const ko = (s.match(/[\u3131-\u318F\uAC00-\uD7A3]/g) || []).length;
+  const en = (s.match(/[A-Za-z]/g) || []).length;
+  if (ko > en) return "ko";
+  if (en > 0 && en >= ko) return "en";
+  return "en";
+}
+
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => {
@@ -173,9 +182,64 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const isNonEmptyString = (s) => typeof s === "string" && s.trim().length > 0;
 const normalizePersona = (p = {}) => ({ ...p, bio: p.bio ?? p.description ?? "" });
 
+// ---- Remote Personas (from Google Sheet via GAS)
+function mapConfigPersonas(cfg, lang = "ko") {
+  const items = cfg?.personas;
+  if (!Array.isArray(items)) return null;
+  return items
+    .map((it) => {
+      // expect fields like id, name, role, traits, description as i18n objects or plain strings
+      const pick = (v) => (typeof v === "object" && v ? pickLang(v, lang) : (v ?? ""));
+      const id = String(it.id || it.key || it.slug || "").trim();
+      if (!id) return null;
+      return {
+        id,
+        name: pick(it.name),
+        role: pick(it.role),
+        traits: pick(it.traits),
+        description: pick(it.description),
+        bio: pick(it.bio || it.description),
+      };
+    })
+    .filter(Boolean);
+}
+function buildPersonaIndex(list) {
+  const idx = {};
+  for (const p of list || []) idx[p.id] = p;
+  return idx;
+}
+function getPersonaById(cfg, id, lang = "ko") {
+  const list = mapConfigPersonas(cfg, lang);
+  if (!list) return null;
+  const idx = buildPersonaIndex(list);
+  return idx[id] || null;
+}
+
+// 모드별( CXP / 감성 ) 가이드 생성
+function modeDirectives(mode = "cxp") {
+  const m = String(mode || "").toLowerCase();
+  if (m === "emotion" || m === "감성") {
+    return {
+      tag: "감성",
+      solo:
+        "[감성 모드]\n- 감정, 톤, 장면 묘사를 우선. 숫자/지표 언급은 최소화.\n- 실제 대화체/내적 독백 1~2문장 포함.\n- 단점이나 불편 지점이 감정에 어떤 영향을 주는지 연결해라.",
+      group:
+        "[감성 모드]\n- 각 발언은 경험의 감정/톤/맥락을 3~6문장으로 묘사.\n- 수치·KPI는 필요 시 1문장 이내로만 언급.\n- 실제 대화체(따옴표)나 감각(촉각/소리/빛) 요소 1개 이상 포함."
+    };
+  }
+  return {
+    tag: "CXP",
+    solo:
+      "[CXP 모드]\n- 무엇(What)/왜(Why)/어떻게(How)를 명확히 구조화.\n- 측정 가능한 지표(KPI, 빈도, 시간, 전환 등)를 포함.\n- 실행 항목(Next actions) 1~3개를 제시.",
+    group:
+      "[CXP 모드]\n- 각 발언은 What/Why/How + 수치/빈도 등 정량화 1개 이상 포함.\n- 현장 실험 아이템을 명시(장소/도구/검증기준)."
+  };
+}
+
 // Solo 메시지 빌더 (연동 성공시에만 시트값 주입, 실패/비활성 시 하드코딩만 사용)
-async function buildSoloMessages({ p, question, history = [] }) {
+async function buildSoloMessages({ p, question, history = [], mode = "cxp" }) {
   const persona = normalizePersona(p);
+  const modeGuide = modeDirectives(mode).solo;
 
   // 기본(하드코딩) 블록
   let background = "";
@@ -221,6 +285,8 @@ ${background ? `배경지식(요약): ${background}\n` : ""}
 - 실제 기능, 앱, 설정, 루틴을 언급한다.  
 - “편리하다, 좋다” 같은 모호한 표현은 쓰지 말고, 왜, 어떻게, 어느 정도 유용한지를 설명한다.  
 - 정보가 부족하면 “Assumptions” 섹션에 간단히 기록한다.  
+- 모드 지침을 따를 것.
+${modeGuide}
 ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
 
 가드레일:
@@ -268,7 +334,13 @@ ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
 }
 
 
-app.get("/personas-list", (req, res) => res.json({ ok: true, items: Object.values(personas) }));
+app.get("/personas-list", async (req, res) => {
+  const lang = (req.query.lang || "ko");
+  const cfg = await tryFetchConfig();
+  const remote = cfg ? mapConfigPersonas(cfg, lang) : null;
+  const items = remote && remote.length ? remote : Object.values(personas).map(normalizePersona);
+  res.json({ ok: true, source: remote && remote.length ? "google-sheet" : "in-memory", items });
+});
 
 app.post("/persona", (req, res) => {
   const id = req.body.id || uuidv4();
@@ -302,16 +374,22 @@ app.post("/chat/solo", async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
 
-    const { persona, personaId, question = "", historyLimit = 20, history = [] } = req.body || {};
-    const pRaw = persona || personas[personaId];
+    const { persona, personaId, question = "", historyLimit = 20, history = [], mode = "cxp" } = req.body || {};
+    const cfgForPersona = await tryFetchConfig();
+    const lang = detectLang(question || "");
+    const remotePersona = personaId ? getPersonaById(cfgForPersona, personaId, lang) : null;
+    const pRaw = persona || remotePersona || personas[personaId];
     if (!pRaw) return res.status(400).json({ ok: false, error: "persona_not_found" });
 
     const q = isNonEmptyString(question) ? question.trim().slice(0, 300) : "";
     if (!q) return res.status(400).json({ ok: false, error: "missing_question" });
 
     const safeHistory = Array.isArray(history) ? history.slice(-Math.max(0, Number(historyLimit) || 0)) : [];
-    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory });
-    const text = await openaiChat(messages);
+    const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory, mode });
+    const temperature = (String(mode).toLowerCase() === "emotion" || mode === "감성") ? 0.8 : 0.3;
+    res.set("x-mode", String(mode));
+    res.set("x-temperature", String(temperature));
+    const text = await openaiChat(messages, temperature);
     return res.json({ ok: true, answer: text });
   } catch (e) {
     const code = e.statusCode || (e.name === "AbortError" ? 504 : 500);
@@ -327,15 +405,20 @@ app.post("/chat/group", async (req, res) => {
       return res.status(500).json({ ok: false, error: "missing_api_key" });
     }
 
-    const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20 } = req.body || {};
+    const { personas: pObjs = [], personaIds = [], topic = "", rounds = 2, historyLimit = 20, mode = "cxp" } = req.body || {};
 
     const safeRounds = clamp(parseInt(rounds, 10) || 2, 1, 5);
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
     if (!safeTopic) return res.status(400).json({ ok: false, error: "missing_topic" });
 
+    const cfgForPersona = await tryFetchConfig();
+
     let picks = Array.isArray(pObjs) ? pObjs.slice(0, 6) : [];
     if (!picks.length && Array.isArray(personaIds) && personaIds.length) {
-      picks = personaIds.slice(0, 6).map((id) => personas[id]).filter(Boolean);
+      const lang = detectLang(safeTopic || "");
+      const remoteList = personaIds.slice(0, 6).map((id) => getPersonaById(cfgForPersona, id, lang)).filter(Boolean);
+      const fallbackList = personaIds.slice(0, 6).map((id) => personas[id]).filter(Boolean);
+      picks = remoteList.length ? remoteList : fallbackList;
     }
     if (picks.length < 2) return res.status(400).json({ ok: false, error: "need_at_least_2_personas" });
 
@@ -359,9 +442,13 @@ app.post("/chat/group", async (req, res) => {
       if (Array.isArray(kpiArr) && kpiArr.length) _kpis = mergeCsv(_kpis, ...kpiArr);
     }
 
+    const modeGuide = modeDirectives(mode).group;
+
     const sys = `
 ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
 ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
+[모드 지침]
+${modeGuide}
 Always answer in the question's language.
 너는 모더레이터다. 참여자들이 '${safeTopic}'에 대해 총 ${safeRounds} 라운드 토론을 하도록 진행한다.
 아래 "출력 형식"을 반드시 지키고, 모든 발언은 구체적 사례와 근거를 포함한다.
@@ -401,10 +488,13 @@ ${roster}
 (최근 컨텍스트 ${historyLimit}개 사용)
 `.trim();
 
+    const temperature = (String(mode).toLowerCase() === "emotion" || mode === "감성") ? 0.8 : 0.3;
+    res.set("x-mode", String(mode));
+    res.set("x-temperature", String(temperature));
     const text = await openaiChat([
       { role: "system", content: sys },
       { role: "user", content: "토론을 시작해." },
-    ]);
+    ], temperature);
 
     const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
     const transcript = [];
@@ -418,7 +508,7 @@ ${roster}
         continue;
       }
       // 일반 대사 전사
-        const m = line.match(/^\s*([^:]+?)\s*:\s*(.+)$/);
+      const m = line.match(/^\s*([^:]+?)\s*:\s*(.+)$/);
       if (m && !/^(인사이트)$/i.test(m[1].trim())) {
         transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
       }
