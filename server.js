@@ -411,8 +411,8 @@ app.post("/chat/group", async (req, res) => {
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
     if (!safeTopic) return res.status(400).json({ ok: false, error: "missing_topic" });
 
+    // --- 페르소나 픽 (시트 > 메모리 우선순위)
     const cfgForPersona = await tryFetchConfig();
-
     let picks = Array.isArray(pObjs) ? pObjs.slice(0, 6) : [];
     if (!picks.length && Array.isArray(personaIds) && personaIds.length) {
       const lang = detectLang(safeTopic || "");
@@ -424,12 +424,10 @@ app.post("/chat/group", async (req, res) => {
 
     const picksNorm = picks.map(normalizePersona);
     const roster = picksNorm.map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`).join("\n");
+    const speakerOrder = picksNorm.map(p => p.name); // 라운드 고정 순서
 
-    let _bg = "";
-    let _styGp = "";
-    let _anti = "모호어, AR/VR, 외부 사실 임의 추가";
-    let _kpis = "체류 시간, 재방문율";
-
+    // --- 시트 스타일/금지어
+    let _bg = "", _styGp = "", _anti = "모호어, AR/VR, 외부 사실 임의 추가", _kpis = "체류 시간, 재방문율";
     const cfg = await tryFetchConfig();
     if (cfg) {
       const bgNew  = pickLang(cfg["background.core"], "ko");
@@ -443,76 +441,132 @@ app.post("/chat/group", async (req, res) => {
     }
 
     const modeGuide = modeDirectives(mode).group;
-
-    const sys = `
-${_bg ? `배경지식(요약): ${_bg}\n` : ""}
-${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
-[모드 지침]
-${modeGuide}
-Always answer in the question's language.
-너는 모더레이터다. 참여자들이 '${safeTopic}'에 대해 총 ${safeRounds} 라운드 토론을 하도록 진행한다.
-아래 "출력 형식"을 반드시 지키고, 모든 발언은 구체적 사례와 근거를 포함한다.
-
-운영 원칙(필수):
-- 오프닝: (모더레이터가) 질문을 다시한번 정의하고 시작을 알린다.
-- 라운드 진행: 매 라운드마다 모든 참석자가 1번씩 말한다(고정 순서, 회전). 한 사람당 3-5문장.
-- 어조: 각 발언은 페르소나의 말투·취향·습관을 그대로 반영한다.
-- 금지: VR/AR 언급 금지. 외부 사실을 임의로 추가하지 말 것(제공된 페르소나 카드·대화 컨텍스트만 사용).
-- 정량화: 가능하면 수치·빈도·시간대·장소 등 구체 수치를 포함.
-- bio 를 기준으로 일화를 만들어서 자세히 설명 가능
-- 근거표기: 발언 말미에 [근거: traits 또는 bio의 핵심 단어 1~2개]를 괄호로 짧게 남긴다.
-- 탐색 심화: 라운드마다 다른 질문 프레임 적용.
-- 갈등 다루기: 상충 의견은 trade-off로 재구성 후 각 1줄 재응답.
-- 오프라인 전환: 매 라운드 ILP 반영 가능한 구체 체험(What/Why/How) 유도.
-- 마지막: “인사이트: …” 한 줄만 출력.
-
-라운드별 모더레이터 프롬프트:
-- (라운드1) "질문에 대한 답변은?"
-- (라운드2) "갤럭시 팝업에서 직접 체험해 보고 싶은 ‘한 가지 체험’과 기대 결과는?"
-- (라운드3+) "현장에서 소비자가 만족하는 경우는 어떤 체험일까?"
-
-스타일 가이드:
-- 구체적 장면(언제/어디/무엇/왜) + 실제 아이폰 기능·설정·앱 이름.
-- '왜 나에게 중요한가' → '현장 테스트 아이디어(What/Why/How)' 순서, 단점 포함.
-- 모호어 금지: 기준/수치/빈도 명시.
-
-출력 형식(파서 호환):
-- 모든 줄은 '이름: 내용' 형태. 라운드 표시는 모더레이터에만 괄호로.
-- 마지막 한 줄: 인사이트: … (블렛포인트)
-- 참가자 이름은 카드와 동일.
-- 금지 패턴: ${_anti}
-- KPI 기본 후보: ${_kpis}
-
-참가자:
-${roster}
-(최근 컨텍스트 ${historyLimit}개 사용)
-`.trim();
-
     const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
-    const text = await openaiChat([
-      { role: "system", content: sys },
-      { role: "user", content: "토론을 시작해." },
+
+    // 라운드별 모더레이터 질문 프레임
+    const roundFrames = [
+      '(라운드1 — 질문정의 및 오프닝) "질문에 대한 답변은?"',
+      '(라운드2 — 오프라인 전환) "갤럭시 팝업에서 직접 체험해 보고 싶은 한 가지 체험과 기대 결과는?"',
+      '(라운드3 — 기대효과) "현장에서 소비자가 만족하는 경우는 어떤 체험일까?"'
+    ];
+
+    // 공통 system 프리앰블
+    const systemBase = `
+  ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
+  ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
+  [모드 지침]
+  ${modeGuide}
+
+  Always answer in the question's language.
+  너는 모더레이터다. 참여자들이 '${safeTopic}'에 대해 총 ${safeRounds} 라운드 토론을 하도록 진행한다.
+
+  핵심 운영 원칙:
+  - 각 라운드에서 모든 참석자가 순서대로 1번씩 발언한다(고정 순서: ${speakerOrder.join(" → ")}).
+  - 한 사람당 3~5문장. 구체적 사례/앱/설정/수치 포함.
+  - 각 발언 말미에 [근거: traits 또는 bio 키워드 1~2개] 표기.
+  - 외부 사실 임의 추가 금지. 금지 패턴: ${_anti}. KPI 후보: ${_kpis}.
+
+  출력 형식(아래 엄격 준수):
+  [ROUND {n}]
+  모더레이터: ({round_label}) 첫 줄에 주제를 간단히 재정의하고 시작 알림.
+  ${speakerOrder.map(n => `${n}: 본인 발언`).join("\n")}
+  (이외 문장/빈 줄/서두·말미 설명 금지. 인사이트 문장 출력 금지.)
+  `.trim();
+
+    // 라운드별로 호출하여 형식 강제
+    const transcript = [];
+    let runningContext = ""; // 다음 라운드를 위한 간단 요약
+
+    for (let r = 1; r <= safeRounds; r++) {
+      const roundLabel = (r <= roundFrames.length) ? roundFrames[r-1] : `(라운드${r}) "이전 논의 기반으로 더 구체화해 주세요."`;
+
+      const sys = systemBase
+        .replace("{n}", String(r))
+        .replace("{round_label}", roundLabel);
+
+      const ctx = runningContext ? `이전 라운드 핵심 요약: ${runningContext}` : "";
+
+      const userMsg = [
+        `[ROUND ${r}]에 해당하는 부분만 출력.`,
+        `주제: ${safeTopic}`,
+        ctx
+      ].join("\n");
+
+      const text = await openaiChat([
+        { role: "system", content: sys },
+        { role: "user", content: userMsg }
+      ], temperature);
+
+      const lines = (text || "")
+        .split(/\r?\n/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const roundLines = [];
+      let sawModerator = false;
+      for (const line of lines) {
+        const m = line.match(/^(?:\[ROUND\s*\d+\]\s*)?([^:]{1,50})\s*:\s*(.+)$/);
+        if (m) {
+          const speaker = m[1].trim();
+          const content = m[2].trim();
+          if (/^모더레이터$/i.test(speaker)) {
+            sawModerator = true;
+            roundLines.push({ speaker: "모더레이터", text: content, round: r });
+          } else if (speakerOrder.includes(speaker)) {
+            roundLines.push({ speaker, text: content, round: r });
+          }
+        }
+      }
+
+      // 모델이 모더레이터 줄을 누락했을 때 안전 보정
+      if (!sawModerator) {
+        roundLines.unshift({
+          speaker: "모더레이터",
+          text: `(${roundLabel}) 오늘의 주제 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`,
+          round: r
+        });
+      }
+
+      // 고정 순서로 1인 1발언 정렬
+      const pickedOnce = new Set();
+      const ordered = [];
+      const modLine = roundLines.find(l => l.speaker === "모더레이터");
+      if (modLine) ordered.push(modLine);
+      for (const sp of speakerOrder) {
+        const found = roundLines.find(l => l.speaker === sp && !pickedOnce.has(sp));
+        if (found) { ordered.push(found); pickedOnce.add(sp); }
+      }
+
+      // 전사 누적 + 다음 라운드 요약 업데이트
+      ordered.forEach(l => transcript.push({ speaker: l.speaker, text: l.text }));
+      const brief = ordered
+        .filter(l => l.speaker !== "모더레이터")
+        .map(l => `${l.speaker}: ${l.text.replace(/\[근거:[^\]]*\]\s*$/, "")}`)
+        .join(" / ")
+        .slice(0, 400);
+      runningContext = brief;
+    }
+
+    // 마지막에 인사이트만 별도로 요약 (3–6 불릿)
+    const insightSys = `
+  너는 모더레이터다. 아래 전사에서 팝업/오프라인 적용 아이디어를 3~6개 핵심 불릿으로만 출력한다.
+  - 각 불릿은 What/Why/How를 1줄에 압축.
+  - AR/VR 금지, 과장 금지, 실제 실행 가능 수준.
+  `.trim();
+
+    const insightUser = transcript.map(l => `${l.speaker}: ${l.text}`).join("\n");
+    const insightText = await openaiChat([
+      { role: "system", content: insightSys },
+      { role: "user", content: insightUser }
     ], temperature);
 
-    const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    const transcript = [];
-    const insights = [];
-
-    for (const line of lines) {
-      // 인사이트만 수집
-      const insightMatch = line.match(/^인사이트\s*:\s*(.+)$/i);
-      if (insightMatch) {
-        insights.push(insightMatch[1].trim());
-        continue;
-      }
-      // 일반 대사 전사
-      const m = line.match(/^\s*([^:]+?)\s*:\s*(.+)$/);
-      if (m && !/^(인사이트)$/i.test(m[1].trim())) {
-        transcript.push({ speaker: m[1].trim(), text: m[2].trim() });
-      }
-    }
+    const insights = (insightText || "")
+      .split(/\r?\n/)
+      .map(s => s.replace(/^\s*[-•]\s*/, "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
 
     return res.json({ ok: true, transcript, insights });
   } catch (e) {
