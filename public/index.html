@@ -434,7 +434,18 @@ function setMode(mode){
   localStorage.setItem(MODE_LS_KEY, val);
   const sw = document.getElementById("modeSwitch");
   if (sw) sw.setAttribute("aria-checked", String(val === "emotion"));
+  // expose current mode on <body> for styling hooks and debugging
+  document.body.dataset.mode = (val === "emotion" ? "emo" : "key");
   window.dispatchEvent(new CustomEvent("modechange", { detail:{ mode: val }}));
+}
+
+function getModeInfo(){
+  const isEmotion = getMode() === "emotion";
+  const mode = isEmotion ? "emo" : "key"; // Google Sheet column id
+  const temperature = isEmotion ? 0.8 : 0.4;  // API temperature
+  // keep body dataset in sync on read, useful on first load
+  document.body.dataset.mode = mode;
+  return { mode, temperature };
 }
 function toggleMode(){ setMode(getMode() === "cxp" ? "emotion" : "cxp"); }
 
@@ -443,6 +454,7 @@ function toggleMode(){ setMode(getMode() === "cxp" ? "emotion" : "cxp"); }
   const sw = document.getElementById("modeSwitch");
   if (!sw) return;
   sw.setAttribute("aria-checked", String(getMode() === "emotion"));
+  document.body.dataset.mode = (getMode() === "emotion" ? "emo" : "key");
   sw.addEventListener("click", toggleMode);
   sw.addEventListener("keydown", (e)=>{
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleMode(); }
@@ -712,6 +724,8 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
   const p = loadPersonas().find(x=>x.name===name);
   if(!p) return toast("선택한 페르소나를 찾을 수 없습니다.");
 
+  const { mode, temperature } = getModeInfo();
+
   const out = $("#soloAnswer");
   out.style.display = "block";
 
@@ -720,7 +734,7 @@ $("#btnAskSolo").addEventListener("click", async ()=>{
     const res = await fetch("/chat/solo",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ persona:p, question:q, historyLimit:limit })
+      body: JSON.stringify({ persona:p, question:q, historyLimit:limit, mode, temperature })
     });
     if(!res.ok){
       toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
@@ -749,6 +763,8 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
   const rounds = parseInt($("#groupRounds").value,10) || 2;
   const limit = parseInt($("#groupLimit").value,10) || 20;
 
+  const { mode, temperature } = getModeInfo();
+
   const out = $("#groupAnswer");
   out.style.display = "block";
 
@@ -757,7 +773,7 @@ $("#btnStartGroup").addEventListener("click", async ()=>{
     const res = await fetch("/chat/group",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit })
+      body: JSON.stringify({ personas:list, topic, rounds, historyLimit:limit, mode, temperature })
     });
     if(!res.ok){
       toast("라이브 API 연결 실패. 관리자에게 문의하세요.");
