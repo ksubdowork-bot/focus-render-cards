@@ -475,6 +475,16 @@ app.post("/chat/group", async (req, res) => {
     // 라운드 수가 더 많으면 빈 문자열로 채우고(라벨 없음), 이전 라운드 맥락을 이용해 심화
     while (roundFrames.length < safeRounds) roundFrames.push("");
 
+    // --- Helper: Round1 opening must not reference previous rounds
+    function sanitizeRound1(text) {
+      if (!text) return "";
+      // Drop leading clauses like "이전 라운드/앞선 논의/직전 논의/앞서 언급된 바와 같이 ..."
+      text = text.replace(/^(?:이전|앞선|앞서|직전)\s*(?:라운드|논의|대화|언급)[^.,]{0,50}[,.]\s*/g, "");
+      // Also remove inline mentions such as "이전 라운드에서 언급된 바와 같이"
+      text = text.replace(/(?:이전|앞선|앞서|직전)\s*(?:라운드|논의|대화|언급)[^.,]{0,30}/g, "");
+      return text.trim();
+    }
+
     // 공통 system 프리앰블
     const systemBase = `
   ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
@@ -505,7 +515,12 @@ app.post("/chat/group", async (req, res) => {
     for (let r = 1; r <= safeRounds; r++) {
       const roundLabel = (r <= roundFrames.length) ? (roundFrames[r-1] || "") : "";
 
-      const sys = systemBase.replace("{n}", String(r));
+      let sys = systemBase.replace("{n}", String(r));
+      if (r === 1) {
+        sys += `
+  추가 규칙(ROUND 1 전용):
+  - 모더레이터 오프닝은 "이전/앞선/직전 라운드" 등의 표현을 절대 쓰지 말고, 오늘의 주제 "${safeTopic}"을(를) 처음 소개하듯 간결히 정의한다.`;
+      }
 
       const ctx = runningContext ? `이전 라운드 핵심 요약: ${runningContext}` : "";
 
@@ -543,9 +558,12 @@ app.post("/chat/group", async (req, res) => {
 
       // 모델이 모더레이터 줄을 누락했을 때 안전 보정
       if (!sawModerator) {
-        const modText = roundLabel
-          ? `${roundLabel} 주제로 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`
-          : `오늘의 주제 "${safeTopic}"를 직전 논의 기반으로 더 구체화해보겠습니다.`;
+        const modText =
+          r === 1
+            ? `오늘의 주제 "${safeTopic}"를 먼저 명확히 정의하고 시작하겠습니다.`
+            : (roundLabel
+                ? `${roundLabel} 주제로 "${safeTopic}"를 다시 정리하고 시작하겠습니다.`
+                : `오늘의 주제 "${safeTopic}"를 직전 논의 기반으로 더 구체화해보겠습니다.`);
         roundLines.unshift({
           speaker: "모더레이터",
           text: modText,
@@ -556,8 +574,16 @@ app.post("/chat/group", async (req, res) => {
       // 고정 순서로 1인 1발언 정렬
       const pickedOnce = new Set();
       const ordered = [];
-      const modLine = roundLines.find(l => l.speaker === "모더레이터");
-      if (modLine) ordered.push(modLine);
+      let modLine = roundLines.find(l => l.speaker === "모더레이터");
+      if (modLine) {
+        if (r === 1) {
+          modLine.text = sanitizeRound1(modLine.text);
+          if (!modLine.text) {
+            modLine.text = `오늘의 주제 "${safeTopic}"를 먼저 명확히 정의하고 시작하겠습니다.`;
+          }
+        }
+        ordered.push(modLine);
+      }
       for (const sp of speakerOrder) {
         const found = roundLines.find(l => l.speaker === sp && !pickedOnce.has(sp));
         if (found) { ordered.push(found); pickedOnce.add(sp); }
@@ -567,7 +593,10 @@ app.post("/chat/group", async (req, res) => {
       ordered.forEach(l => transcript.push({ speaker: l.speaker, text: l.text }));
       const brief = ordered
         .filter(l => l.speaker !== "모더레이터")
-        .map(l => `${l.speaker}: ${l.text.replace(/\[근거:[^\]]*\]\s*$/, "")}`)
+        .map(l => {
+          const t = r === 1 ? sanitizeRound1(l.text) : l.text;
+          return `${l.speaker}: ${t.replace(/\[근거:[^\]]*\]\s*$/, "")}`;
+        })
         .join(" / ")
         .slice(0, 400);
       runningContext = brief;
