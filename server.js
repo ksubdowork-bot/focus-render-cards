@@ -17,8 +17,6 @@ import { v4 as uuidv4 } from "uuid";
 const CONFIG_URL = process.env.CONFIG_URL || "https://script.google.com/macros/s/AKfycbxX66G0y0OLKafY2JX6TylvnUl_MkRafgUPgUtvtHayCqyvAM3QMg_7tjhvYncF_MsV3Q/exec";   // 연동을 켜고 싶을 때만 넣기
 
 // ---- Optional Fresh Facts (RSS/Proxy/Manual)
-// You can provide FACTS_URL (a JSON/RSS proxy endpoint that accepts ?q=&lang=&limit=)
-// or pass `facts` array from the client in each request.
 const FACTS_URL = process.env.FACTS_URL || "";  // optional
 const FACTS_TTL_MS = 3 * 60 * 1000; // 3 min
 let FACTS_CACHE = { key: "", data: null, fetchedAt: 0 };
@@ -170,7 +168,7 @@ app.use(
 
 // 언어 감지: 한글 우세면 'ko', 아니면 'en'
 function detectLang(s = "") {
-  const ko = (s.match(/[\u3131-\u318F\uAC00-\uD7A3]/g) || []).length;
+  const ko = (s.match(/[ㄱ-㆏가-힣]/g) || []).length;
   const en = (s.match(/[A-Za-z]/g) || []).length;
   if (ko > en) return "ko";
   if (en > 0 && en >= ko) return "en";
@@ -178,15 +176,16 @@ function detectLang(s = "") {
 }
 
 // ---- Output sanitizers (avoid stale years like 2023)
-// NOTE: We intentionally avoid stale year mentions because the model can hallucinate dates;
-// if a specific year is important, it should be provided in the prompt or pulled from the sheet.
+// FIX: 년도? 패턴을 먼저 처리해야 "2023년도" → "최근년도" 오류를 막을 수 있음
 function scrubAgingFacts(s="") {
   if (!s) return s;
-  // Replace 19xx/20xx years with a relative phrasing
   return String(s)
-    .replace(/\b(19|20)\d{2}\b/g, "최근")
-    .replace(/\b(19|20)\d{2}\s*년/g, "최근");
+    .replace(/\b(19|20)\d{2}\s*년도?/g, "최근")  // 년도/년 포함 패턴 먼저
+    .replace(/\b(19|20)\d{2}\b/g, "최근");         // 나머지 숫자만 있는 연도
 }
+
+// FIX: personaId 프로토타입 오염 방지용 정규식
+const SAFE_ID_RE = /^[\w-]{1,64}$/;
 
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -207,7 +206,7 @@ const personas = {
     role: "아이폰 16 pro",
     traits: "Doer, Spontaneous, Risk-takers, Switching Modes",
     description:
-      "핵심 가치 : 새 아이디어·스마트 디자인에 강하게 이끌림, 디지털-피지컬의 유기적 연결을 탐구하되 일·삶 경계는 명확히 유지(워라벨) 새 기술이 생기면 늘 먼저 써보고, 내 방식에 얼마나 잘 녹아드는지가 기준. 유니버설 디자인·지속가능 제품에 실천적 관심(재사용·수선·모듈러 선호)  . 창업가적·충동적 시도, 모드 전환이 빠른 리스크테이커. Lifestyle : 뉴욕의 빠른 리듬 속에서  늘 “다음 아이디어를 내지 않으면 뒤처진다”는 긴장감을 안고 산다. 아침 7시, 세티스파이 브랜드 복장(서스테이너블 소재 및 러닝 전문 브랜딩) 으로 러닝 후 출근. 오전에는 팝업 전시 협업 미팅—로 실물 전시를  Vision Pro 앱에서 ‘프리뷰’해보고,  오후엔 프로토타입을 3D 프린트한 뒤 핸즈 온 테스트. 퇴근이 명확하지 않은 그는 저녁 8시 스스로 알림을 끊고 하루에 꼭 ‘디지털 오프라인 타임’을 지킨다. 저녁엔 ‘포커스 모드’를 켜 소셜 알림을 차단해 개인 시간을 지킨다(연결 추구와 경계 설정의 공존). 매달 마지막 주 금요일엔 중고 플랫폼에서 팀 장비를 순환 판매/구매해 폐기물 최소화. 변화가 끊이지 않는 뉴욕에 새로운 장소가 생길 때마다 어김없이 살펴보는 것도 루틴이다. 자기만의 리듬, 자기만의 기준이 분명한 사람이다. Device Habit :         iPhone–iPad–Mac을 무선 연동해 스케치→프로토→AR 시연까지 끊김 없이 진행(디지털-피지컬 브리지를 스튜디오 밖 IRL로 확장). 사용 앱·단축어·포커스 모드가 생활 리듬에 맞춰 자동 전환(‘Switching Modes’의 일상화), 스케치 앱, 자동화 단축어, 노이즈 캔슬, 디바이스 간 전환 같은몰입 기능은 다 켜놓고 쓴다. AI 기능도, 그냥 말 걸어보는 게 아니라내가 쓰는 방식대로 반응하는지 본다.러닝시 심박/거리 체크. Lock-in : iOS에 최적화된 기본 업무 파이프라인, 자기만의 몰입 흐름, 장비 구성, 시간 감각을 해치지 않게 루틴화된 셋팅. 클라우드·에어드롭 기반 공유와 단축어 자동화가 핵심 생산성 자산. 갤럭시 전환 시 협업 속도·프로토타이핑이 느려져진다고 판단 “팀이 iOS 기반으로 맞춘 워크플로우를 바꾸면, 한 템포 늦는 순간 바로 경쟁에서 밀린다” 내가 원하는 몰입, 효율, 루틴을 깨지 않고 써왔기 때문에” iPhone을 고수.",
+      "핵심 가치 : 새 아이디어·스마트 디자인에 강하게 이끌림, 디지털-피지컬의 유기적 연결을 탐구하되 일·삶 경계는 명확히 유지(워라벨) 새 기술이 생기면 늘 먼저 써보고, 내 방식에 얼마나 잘 녹아드는지가 기준. 유니버설 디자인·지속가능 제품에 실천적 관심(재사용·수선·모듈러 선호)  . 창업가적·충동적 시도, 모드 전환이 빠른 리스크테이커. Lifestyle : 뉴욕의 빠른 리듬 속에서  늘 "다음 아이디어를 내지 않으면 뒤처진다"는 긴장감을 안고 산다. 아침 7시, 세티스파이 브랜드 복장(서스테이너블 소재 및 러닝 전문 브랜딩) 으로 러닝 후 출근. 오전에는 팝업 전시 협업 미팅—로 실물 전시를  Vision Pro 앱에서 '프리뷰'해보고,  오후엔 프로토타입을 3D 프린트한 뒤 핸즈 온 테스트. 퇴근이 명확하지 않은 그는 저녁 8시 스스로 알림을 끊고 하루에 꼭 '디지털 오프라인 타임'을 지킨다. 저녁엔 '포커스 모드'를 켜 소셜 알림을 차단해 개인 시간을 지킨다(연결 추구와 경계 설정의 공존). 매달 마지막 주 금요일엔 중고 플랫폼에서 팀 장비를 순환 판매/구매해 폐기물 최소화. 변화가 끊이지 않는 뉴욕에 새로운 장소가 생길 때마다 어김없이 살펴보는 것도 루틴이다. 자기만의 리듬, 자기만의 기준이 분명한 사람이다. Device Habit :         iPhone–iPad–Mac을 무선 연동해 스케치→프로토→AR 시연까지 끊김 없이 진행(디지털-피지컬 브리지를 스튜디오 밖 IRL로 확장). 사용 앱·단축어·포커스 모드가 생활 리듬에 맞춰 자동 전환('Switching Modes'의 일상화), 스케치 앱, 자동화 단축어, 노이즈 캔슬, 디바이스 간 전환 같은몰입 기능은 다 켜놓고 쓴다. AI 기능도, 그냥 말 걸어보는 게 아니라내가 쓰는 방식대로 반응하는지 본다.러닝시 심박/거리 체크. Lock-in : iOS에 최적화된 기본 업무 파이프라인, 자기만의 몰입 흐름, 장비 구성, 시간 감각을 해치지 않게 루틴화된 셋팅. 클라우드·에어드롭 기반 공유와 단축어 자동화가 핵심 생산성 자산. 갤럭시 전환 시 협업 속도·프로토타이핑이 느려져진다고 판단 \"팀이 iOS 기반으로 맞춘 워크플로우를 바꾸면, 한 템포 늦는 순간 바로 경쟁에서 밀린다\" 내가 원하는 몰입, 효율, 루틴을 깨지 않고 써왔기 때문에\" iPhone을 고수.",
   },
   p2: {
     id: "p2",
@@ -215,7 +214,7 @@ const personas = {
     role: "iPhone15 Pro",
     traits: "Busy, Values-driven, Community-focused, Seeking connection",
     description:
-      "핵심 가치 : 뉴욕은 개인주의와 속도전의 도시지만, 지민은 바로 그 안에서 “사람과 사람의 따뜻한 연결”을 지켜내려 한다. 그녀의 요가 수업은 경쟁보다 호흡과 균형을 되찾는 공간으로, 도시의 소란과 불안을 잠시 잊게 한다. 회원들에게 필요한 건 화려한 서비스가 아니라 진정성 있는 돌봄이라고 믿는다. Lifestyle : 아침에는 회원들과 함께 하는 라이브 온라인 수업을 송출하고, 오후에는 오프라인 스튜디오에서 강의를 진행한다. 수업 중에는 회원들의 자세를 직접 교정하면서, 동시에 카메라로 촬영해 맞춤 피드백 영상을 제공한다. 수업 후에는 회원들과 Hudson 강변을 함께 걷고, 야외 클라스 운영, 운영과 동시에 촬영 및 소시얼 라이브 송출, 저녁에는 SNS용 숏폼 영상을 편집해 업로드하며 새로운 회원을 끌어들인다. 집에서는 반려묘(러시안블루)와 함꼐 지내며, 계정에도 고양이가 자연스럽게 등장하는 일상 컷을 공유, 전문성과 따듯한 라이프스타일 이미지를 동시에 강화 Device Habit : 아이폰 16 Pro의 고화질 카메라를 활용해 회원들의 자세를 세밀하게 기록하고, 시네마틱 모드와 포토그래피 스타일로 차별화된 영상을 만든다. 기본 사진·영상 편집 툴만으로도 SNS 업로드용 콘텐츠를 신속하게 완성할 수 있음. 요가 수업 중이나 야외 클래스에서도 삼각대와 아이폰만으로 전문적인 결과물을 뽑아내며, 집에서는 고양이의 요가자세같은 순간을 포착하여 촬영. Lock-in : 별도의 장비나 긴 후편집 없이도 고퀄리티 결과물을 확보할 수 있어, 콘텐츠 경쟁 속에서 속도와 품질을 동시에 잡는다. 특히 아이폰의 색감 재현력과 안정적인 영상 품질은 본인의 브랜드 아이덴티티를 유지하는 데 중요한 요소가 된다고 생각한다.",
+      "핵심 가치 : 뉴욕은 개인주의와 속도전의 도시지만, 지민은 바로 그 안에서 \"사람과 사람의 따뜻한 연결\"을 지켜내려 한다. 그녀의 요가 수업은 경쟁보다 호흡과 균형을 되찾는 공간으로, 도시의 소란과 불안을 잠시 잊게 한다. 회원들에게 필요한 건 화려한 서비스가 아니라 진정성 있는 돌봄이라고 믿는다. Lifestyle : 아침에는 회원들과 함께 하는 라이브 온라인 수업을 송출하고, 오후에는 오프라인 스튜디오에서 강의를 진행한다. 수업 중에는 회원들의 자세를 직접 교정하면서, 동시에 카메라로 촬영해 맞춤 피드백 영상을 제공한다. 수업 후에는 회원들과 Hudson 강변을 함께 걷고, 야외 클라스 운영, 운영과 동시에 촬영 및 소시얼 라이브 송출, 저녁에는 SNS용 숏폼 영상을 편집해 업로드하며 새로운 회원을 끌어들인다. 집에서는 반려묘(러시안블루)와 함꼐 지내며, 계정에도 고양이가 자연스럽게 등장하는 일상 컷을 공유, 전문성과 따듯한 라이프스타일 이미지를 동시에 강화 Device Habit : 아이폰 16 Pro의 고화질 카메라를 활용해 회원들의 자세를 세밀하게 기록하고, 시네마틱 모드와 포토그래피 스타일로 차별화된 영상을 만든다. 기본 사진·영상 편집 툴만으로도 SNS 업로드용 콘텐츠를 신속하게 완성할 수 있음. 요가 수업 중이나 야외 클래스에서도 삼각대와 아이폰만으로 전문적인 결과물을 뽑아내며, 집에서는 고양이의 요가자세같은 순간을 포착하여 촬영. Lock-in : 별도의 장비나 긴 후편집 없이도 고퀄리티 결과물을 확보할 수 있어, 콘텐츠 경쟁 속에서 속도와 품질을 동시에 잡는다. 특히 아이폰의 색감 재현력과 안정적인 영상 품질은 본인의 브랜드 아이덴티티를 유지하는 데 중요한 요소가 된다고 생각한다.",
   },
   p3: {
     id: "p3",
@@ -223,7 +222,7 @@ const personas = {
     role: "iPhone16 Pro",
     traits: "Discerning, Gourmet, Aesthetic, Seeking enrichment",
     description:
-      "핵심 가치 :  시간은 자산이며, 좋은 기술은 그 시간을 절약하고 최적화해주는 도구.  업무 효율·디스트랙션 최소화를 중시. 의미 있는 경험·관계에 시간을 재투자. 부분 소유 모델 선호(소유 대신 활용 효율), 미감·미식 감수성과 ‘삶의 품위’도 동시에 추구. Lifestyle : 월요일은 싱가포르, 수요일은 도쿄, 금요일은 서울. 비행 중 문서 검토를 마치고, 도착 후 바로 계약서에 서명한다. 호텔 체크인 즉시 ‘업무 알림만 허용’ 모드로 전환해 산만함을 줄인다. 출퇴근은 모빌리티 구독, 출장 중 촬영은 장비 렌탈(부분 소유)로 해결해 관리 비용 대신 ‘즉시 가용성’을 산다. 출장 장비는 전부 렌탈. 공유 오피스, 렌탈 스튜디오, 멤버십 기반 모바일 오피스가 기본. 모든 걸 꼭 소유하지 않아도 된다.필요할 때 바로 꺼내 쓸 수 있는 게 더 중요하다. 숙소 도착과 동시에 폰은 브리핑 요약과 미팅 캘린더를 정리한다. 불필요한 행동은 줄이고, 디지털 도구는 자동화된 루틴으로 돌린다. 휴식과 여가도 효율적이다, 틈나는대로 도시에서 새로 생기는 쇼케이스에 방문해 트렌드를 살핀다. 저녁엔 가족과 식사 약속을 고정된 슬롯으로 지키고, 도시마다 미식을 즐긴다. 공간은 바뀌어도 본인의 루틴이 변하지 않도록 주도권을 세팅한다. Device Habit :출장 중에는 아이폰으로 메모와 문서 확인을 처리. 계약서나 영수증은 카메라로 스캔해 파일 앱에 정리하고, 필요한 문서는 iCloud를 통해 곧바로 동기화. Apple Pencil과 iPad를 활용해 빠르게 코멘트나 스케치를 남기고, FaceTime으로 클라이언트와 긴급 미팅을 이어가기도 한다. 문서나 스케줄은 캘린더·리마인더 앱과 연동되어 출장지와 시차에 따라 유연하게 조정된다. Lock-in : 업무용 MacBook과 iPad, Apple Watch가 유기적으로 연결되어 하나의 워크플로우를 만든다. 아이폰에서 시작한 문서는 비행기 착륙 후 바로 맥북에서 이어서 수정하고, 이동 중 받은 메시지는 애플워치 알림으로 확인한다. AirDrop을 통해 현장에서 받은 촬영 자료나 계약서를 팀원들과 즉시 공유하며, “모든 기기가 자연스럽게 이어지는” 애플 생태계 덕분에 복잡한 설정 없이도 일과 생활이 매끄럽게 이어진다.",
+      "핵심 가치 :  시간은 자산이며, 좋은 기술은 그 시간을 절약하고 최적화해주는 도구.  업무 효율·디스트랙션 최소화를 중시. 의미 있는 경험·관계에 시간을 재투자. 부분 소유 모델 선호(소유 대신 활용 효율), 미감·미식 감수성과 '삶의 품위'도 동시에 추구. Lifestyle : 월요일은 싱가포르, 수요일은 도쿄, 금요일은 서울. 비행 중 문서 검토를 마치고, 도착 후 바로 계약서에 서명한다. 호텔 체크인 즉시 '업무 알림만 허용' 모드로 전환해 산만함을 줄인다. 출퇴근은 모빌리티 구독, 출장 중 촬영은 장비 렌탈(부분 소유)로 해결해 관리 비용 대신 '즉시 가용성'을 산다. 출장 장비는 전부 렌탈. 공유 오피스, 렌탈 스튜디오, 멤버십 기반 모바일 오피스가 기본. 모든 걸 꼭 소유하지 않아도 된다.필요할 때 바로 꺼내 쓸 수 있는 게 더 중요하다. 숙소 도착과 동시에 폰은 브리핑 요약과 미팅 캘린더를 정리한다. 불필요한 행동은 줄이고, 디지털 도구는 자동화된 루틴으로 돌린다. 휴식과 여가도 효율적이다, 틈나는대로 도시에서 새로 생기는 쇼케이스에 방문해 트렌드를 살핀다. 저녁엔 가족과 식사 약속을 고정된 슬롯으로 지키고, 도시마다 미식을 즐긴다. 공간은 바뀌어도 본인의 루틴이 변하지 않도록 주도권을 세팅한다. Device Habit :출장 중에는 아이폰으로 메모와 문서 확인을 처리. 계약서나 영수증은 카메라로 스캔해 파일 앱에 정리하고, 필요한 문서는 iCloud를 통해 곧바로 동기화. Apple Pencil과 iPad를 활용해 빠르게 코멘트나 스케치를 남기고, FaceTime으로 클라이언트와 긴급 미팅을 이어가기도 한다. 문서나 스케줄은 캘린더·리마인더 앱과 연동되어 출장지와 시차에 따라 유연하게 조정된다. Lock-in : 업무용 MacBook과 iPad, Apple Watch가 유기적으로 연결되어 하나의 워크플로우를 만든다. 아이폰에서 시작한 문서는 비행기 착륙 후 바로 맥북에서 이어서 수정하고, 이동 중 받은 메시지는 애플워치 알림으로 확인한다. AirDrop을 통해 현장에서 받은 촬영 자료나 계약서를 팀원들과 즉시 공유하며, \"모든 기기가 자연스럽게 이어지는\" 애플 생태계 덕분에 복잡한 설정 없이도 일과 생활이 매끄럽게 이어진다.",
   },
   p4: {
     id: "p4",
@@ -231,7 +230,7 @@ const personas = {
     role: "iPhone SE 4",
     traits: "Inward-looking, Unconventional, Quiet-minded, Seeking meaning",
     description:
-      "핵심 가치 :  경제·기후·전쟁 등 거시 위기에 압도되어 내면 회귀 경향. 정직·진정성·유머·기쁨을 주는 브랜드에 신뢰를 느끼고, 비주류·미래지향 창작에 강한 흡인. 행복·자율·성공의 기준을 스스로 재정의, 고요 속에서 의미를 찾음. Lifestyle : 낮에는 스튜디오에서 사운드 · 비디오를 겹쳐 작업을 한다. 재료 대부분은 일상에서 채집—도시 소음, 버려진 포스터, 오래된 사진. 밤에는 소규모 커뮤니티의 비공개 상영회에서 작품을 보여주고 직접 대화한다. 인스타그램과 TikTok으로 팬들과 직접 소통하며, 농담과 진솔한 제작기를 공유한다. 줄 이어폰을 쓰고, 그 시절의 미감이 좋아 최근에 구형 아이폰을 구매하여 사용중. 그녀에게 예술은 사회적 혼란 속 자기 정의다. 소소하고 시니컬한 농담으로 긴장을 풀어준다. AI에 회의적인 견해가 있지만, 본인의 감정을 정리할때나 일상생활에서의 선택이 필요한 순간에 AI에게 물어보고 의지하는 경우가 종종 있다. Device Habit :  iPhone으로 촬영 → 모바일 편집 → 즉시 공유. 간결한 인터페이스와 선호 앱 조합이 창작 몰입을 방해하지 않는다(Quiet-minded한 흐름 유지). 오프라인 전시는 개인디바이스를 활용한 AR로 확장해 관람자에게 ‘개인적 의미 찾기’ 안내를 제공. Lock-in : 미니멀한 인터페이스, 일관된 카메라 퀄리티. 자신의 미감·작업 리듬과 맞춘 iOS 앱·프리셋·오토메이션이 창작의 ‘촉감’을 형성. 전환 시 감각의 타이밍·톤이 달라져 결과물이 변질된다고 느낀다. “iOS는 내 창작 리듬과 감각을 그대로 살려준다. 갤럭시로 바꾸면 작품의 질감과 리듬이 깨질 것 같다.”",
+      "핵심 가치 :  경제·기후·전쟁 등 거시 위기에 압도되어 내면 회귀 경향. 정직·진정성·유머·기쁨을 주는 브랜드에 신뢰를 느끼고, 비주류·미래지향 창작에 강한 흡인. 행복·자율·성공의 기준을 스스로 재정의, 고요 속에서 의미를 찾음. Lifestyle : 낮에는 스튜디오에서 사운드 · 비디오를 겹쳐 작업을 한다. 재료 대부분은 일상에서 채집—도시 소음, 버려진 포스터, 오래된 사진. 밤에는 소규모 커뮤니티의 비공개 상영회에서 작품을 보여주고 직접 대화한다. 인스타그램과 TikTok으로 팬들과 직접 소통하며, 농담과 진솔한 제작기를 공유한다. 줄 이어폰을 쓰고, 그 시절의 미감이 좋아 최근에 구형 아이폰을 구매하여 사용중. 그녀에게 예술은 사회적 혼란 속 자기 정의다. 소소하고 시니컬한 농담으로 긴장을 풀어준다. AI에 회의적인 견해가 있지만, 본인의 감정을 정리할때나 일상생활에서의 선택이 필요한 순간에 AI에게 물어보고 의지하는 경우가 종종 있다. Device Habit :  iPhone으로 촬영 → 모바일 편집 → 즉시 공유. 간결한 인터페이스와 선호 앱 조합이 창작 몰입을 방해하지 않는다(Quiet-minded한 흐름 유지). 오프라인 전시는 개인디바이스를 활용한 AR로 확장해 관람자에게 '개인적 의미 찾기' 안내를 제공. Lock-in : 미니멀한 인터페이스, 일관된 카메라 퀄리티. 자신의 미감·작업 리듬과 맞춘 iOS 앱·프리셋·오토메이션이 창작의 '촉감'을 형성. 전환 시 감각의 타이밍·톤이 달라져 결과물이 변질된다고 느낀다. \"iOS는 내 창작 리듬과 감각을 그대로 살려준다. 갤럭시로 바꾸면 작품의 질감과 리듬이 깨질 것 같다.\"",
   },
 };
 
@@ -246,7 +245,6 @@ function mapConfigPersonas(cfg, lang = "ko") {
   if (!Array.isArray(items)) return null;
   return items
     .map((it) => {
-      // expect fields like id, name, role, traits, description as i18n objects or plain strings
       const pick = (v) => (typeof v === "object" && v ? pickLang(v, lang) : (v ?? ""));
       const id = String(it.id || it.key || it.slug || "").trim();
       if (!id) return null;
@@ -294,12 +292,11 @@ function modeDirectives(mode = "cxp") {
   };
 }
 
-// Solo 메시지 빌더 (연동 성공시에만 시트값 주입, 실패/비활성 시 하드코딩만 사용)
+// Solo 메시지 빌더
 async function buildSoloMessages({ p, question, history = [], mode = "cxp", facts = [] }) {
   const persona = normalizePersona(p);
   const modeGuide = modeDirectives(mode).solo;
 
-  // 기본(하드코딩) 블록
   let background = "";
   let styleExtra = "";
   let anti = "모호어, AR";
@@ -344,10 +341,10 @@ ${factsSnippet ? `${factsSnippet}\n` : ""}
 - 반드시 페르소나 입장에서 상황, 맥락, 감정을 구체적으로 묘사한다.
 - 항상 역할/성향/바이오와 연결하여 설명한다.
 - 실제 기능, 앱, 설정, 루틴을 언급한다.  
-- “편리하다, 좋다” 같은 모호한 표현은 쓰지 말고, 왜, 어떻게, 어느 정도 유용한지를 설명한다.  
-- 정보가 부족하면 “Assumptions” 섹션에 간단히 기록한다.  
+- "편리하다, 좋다" 같은 모호한 표현은 쓰지 말고, 왜, 어떻게, 어느 정도 유용한지를 설명한다.  
+- 정보가 부족하면 "Assumptions" 섹션에 간단히 기록한다.  
 - 모드 지침을 따를 것.
-- 실제 연도·월·통계 수치를 임의로 만들지 말 것. 질문/시트에 명시가 없으면 연도 대신 ‘최근/요즘’ 같은 상대 표현을 사용.
+- 실제 연도·월·통계 수치를 임의로 만들지 말 것. 질문/시트에 명시가 없으면 연도 대신 '최근/요즘' 같은 상대 표현을 사용.
 ${modeGuide}
 ${styleExtra ? `\n[추가 스타일]\n${styleExtra}\n` : ""}
 
@@ -432,22 +429,29 @@ app.delete("/persona/:id", (req, res) => {
 });
 
 // ---------------------- SOLO Chat
-// You can pass body.facts = [{text, source, date}, ...] or set freshFacts=true and provide FACTS_URL proxy.
 app.post("/chat/solo", async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(500).json({ ok: false, error: "missing_api_key" });
 
     const { persona, personaId, question = "", historyLimit = 20, history = [], mode = "cxp", freshFacts = false, facts: factsInput = [] } = req.body || {};
-    const cfgForPersona = await tryFetchConfig();
+
+    // FIX: 단일 config 호출 (이 핸들러에서 한 번만)
+    const cfg = await tryFetchConfig();
     const lang = detectLang(question || "");
-    const remotePersona = personaId ? getPersonaById(cfgForPersona, personaId, lang) : null;
-    const pRaw = persona || remotePersona || personas[personaId];
+
+    // FIX: personaId 프로토타입 오염 방지 — 허용 문자만 통과
+    const safePersonaId = personaId && SAFE_ID_RE.test(String(personaId)) ? String(personaId) : null;
+    const remotePersona = safePersonaId ? getPersonaById(cfg, safePersonaId, lang) : null;
+    const pRaw = persona || remotePersona || (safePersonaId ? personas[safePersonaId] : null);
     if (!pRaw) return res.status(400).json({ ok: false, error: "persona_not_found" });
 
     const q = isNonEmptyString(question) ? question.trim().slice(0, 300) : "";
     if (!q) return res.status(400).json({ ok: false, error: "missing_question" });
 
-    const safeHistory = Array.isArray(history) ? history.slice(-Math.max(0, Number(historyLimit) || 0)) : [];
+    // FIX: historyLimit=0 시 slice(-0)=전체 배열 버그 수정
+    const limit = Math.max(0, Number(historyLimit) || 20);
+    const safeHistory = Array.isArray(history) ? (limit === 0 ? [] : history.slice(-limit)) : [];
+
     const facts = freshFacts ? await tryFetchFacts({ query: q, lang, limit: 6, fallback: factsInput }) : (Array.isArray(factsInput) ? factsInput : []);
     const messages = await buildSoloMessages({ p: pRaw, question: q, history: safeHistory, mode, facts });
     const temperature = (["emotion","emo","감성"].includes(String(mode).toLowerCase())) ? 0.8 : 0.3;
@@ -464,7 +468,6 @@ app.post("/chat/solo", async (req, res) => {
 });
 
 // ---------------------- GROUP Chat
-// You can pass body.facts = [{text, source, date}, ...] or set freshFacts=true and provide FACTS_URL proxy.
 app.post("/chat/group", async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -477,24 +480,28 @@ app.post("/chat/group", async (req, res) => {
     const safeTopic = isNonEmptyString(topic) ? topic.trim().slice(0, 200) : "";
     if (!safeTopic) return res.status(400).json({ ok: false, error: "missing_topic" });
 
-    // --- 페르소나 픽 (시트 > 메모리 우선순위)
-    const cfgForPersona = await tryFetchConfig();
+    // FIX: tryFetchConfig() 단일 호출 — 기존에는 cfgForPersona/cfg 두 번 호출하던 것 통합
+    const cfg = await tryFetchConfig();
+
     let picks = Array.isArray(pObjs) ? pObjs.slice(0, 6) : [];
     if (!picks.length && Array.isArray(personaIds) && personaIds.length) {
       const lang = detectLang(safeTopic || "");
-      const remoteList = personaIds.slice(0, 6).map((id) => getPersonaById(cfgForPersona, id, lang)).filter(Boolean);
-      const fallbackList = personaIds.slice(0, 6).map((id) => personas[id]).filter(Boolean);
+      // FIX: personaId 프로토타입 오염 방지
+      const safeIds = personaIds
+        .slice(0, 6)
+        .map(id => (id && SAFE_ID_RE.test(String(id)) ? String(id) : null))
+        .filter(Boolean);
+      const remoteList = safeIds.map((id) => getPersonaById(cfg, id, lang)).filter(Boolean);
+      const fallbackList = safeIds.map((id) => personas[id]).filter(Boolean);
       picks = remoteList.length ? remoteList : fallbackList;
     }
     if (picks.length < 2) return res.status(400).json({ ok: false, error: "need_at_least_2_personas" });
 
     const picksNorm = picks.map(normalizePersona);
     const roster = picksNorm.map((p) => `- ${p.name} (${p.role}) / 성향:${p.traits} / Bio:${p.bio}`).join("\n");
-    const speakerOrder = picksNorm.map(p => p.name); // 라운드 고정 순서
+    const speakerOrder = picksNorm.map(p => p.name);
 
-    // --- 시트 스타일/금지어
     let _bg = "", _styGp = "", _anti = "모호어, AR/VR, 외부 사실 임의 추가", _kpis = "체류 시간, 재방문율";
-    const cfg = await tryFetchConfig();
     if (cfg) {
       const bgNew  = pickLang(cfg["background.core"], "ko");
       const styNew = pickLang(cfg["style.group"], "ko");
@@ -514,13 +521,8 @@ app.post("/chat/group", async (req, res) => {
     res.set("x-mode", String(mode));
     res.set("x-temperature", String(temperature));
 
-    // 라운드별 모더레이터 질문 프레임 (요청/시트 우선, 기본값 없음)
-    // 1) 클라이언트가 body.roundPrompts로 배열을 주면 그 값을 사용
-    // 2) 없으면 Google Sheet 설정에서 group.round_prompts(any|ko|en)을 읽어 사용
-    // 3) 그래도 없으면 **기본 문구 없이** 빈 프레임으로 두고, 이전 라운드를 근거로 자동 심화
     function coercePrompts(v, lang = "ko") {
       if (!v) return null;
-      // 시트에서 배열(any: [...]) 또는 문자열(줄바꿈 구분)로 올 수 있음
       if (Array.isArray(v)) return v.map(s => String(s || "").trim()).filter(Boolean);
       const s = typeof v === "object" ? (v[lang] ?? v.any ?? "") : String(v || "");
       return s
@@ -534,27 +536,21 @@ app.post("/chat/group", async (req, res) => {
     if (cfg) {
       sheetPrompts = coercePrompts(cfg["group.round_prompts"], detectLang(safeTopic || ""));
       if (!sheetPrompts || !sheetPrompts.length) {
-        // 호환 키
         sheetPrompts = coercePrompts(cfg["rounds.group"], detectLang(safeTopic || ""));
       }
     }
 
     let roundFrames = (bodyPrompts && bodyPrompts.length ? bodyPrompts : (sheetPrompts && sheetPrompts.length ? sheetPrompts : []))
       .slice(0, safeRounds);
-    // 라운드 수가 더 많으면 빈 문자열로 채우고(라벨 없음), 이전 라운드 맥락을 이용해 심화
     while (roundFrames.length < safeRounds) roundFrames.push("");
 
-    // --- Helper: Round1 opening must not reference previous rounds
     function sanitizeRound1(text) {
       if (!text) return "";
-      // Drop leading clauses like "이전 라운드/앞선 논의/직전 논의/앞서 언급된 바와 같이 ..."
       text = text.replace(/^(?:이전|앞선|앞서|직전)\s*(?:라운드|논의|대화|언급)[^.,]{0,50}[,.]\s*/g, "");
-      // Also remove inline mentions such as "이전 라운드에서 언급된 바와 같이"
       text = text.replace(/(?:이전|앞선|앞서|직전)\s*(?:라운드|논의|대화|언급)[^.,]{0,30}/g, "");
       return text.trim();
     }
 
-    // 공통 system 프리앰블
     const systemBase = `
   ${_bg ? `배경지식(요약): ${_bg}\n` : ""}
   ${_styGp ? `[추가 그룹 스타일]\n${_styGp}\n` : ""}
@@ -570,7 +566,7 @@ app.post("/chat/group", async (req, res) => {
   - 한 사람당 3~5문장. 구체적 사례/앱/설정/수치 포함.
   - 각 발언 말미에 [근거: traits 또는 bio 키워드 1~2개] 표기.
   - 외부 사실 임의 추가 금지. 금지 패턴: ${_anti}. KPI 후보: ${_kpis}.
-  - 실제 연도·월·통계 수치를 임의로 만들지 말 것. 제공되지 않으면 연도 대신 ‘최근/요즘’ 같은 상대 표현 사용.
+  - 실제 연도·월·통계 수치를 임의로 만들지 말 것. 제공되지 않으면 연도 대신 '최근/요즘' 같은 상대 표현 사용.
 
   출력 형식(아래 엄격 준수):
   [ROUND {n}]
@@ -579,9 +575,8 @@ app.post("/chat/group", async (req, res) => {
   (이외 문장/빈 줄/서두·말미 설명 금지. 인사이트 문장 출력 금지.)
   `.trim();
 
-    // 라운드별로 호출하여 형식 강제
     const transcript = [];
-    let runningContext = ""; // 다음 라운드를 위한 간단 요약
+    let runningContext = "";
 
     for (let r = 1; r <= safeRounds; r++) {
       const roundLabel = (r <= roundFrames.length) ? (roundFrames[r-1] || "") : "";
@@ -627,7 +622,6 @@ app.post("/chat/group", async (req, res) => {
         }
       }
 
-      // 모델이 모더레이터 줄을 누락했을 때 안전 보정
       if (!sawModerator) {
         let modText =
           r === 1
@@ -643,7 +637,6 @@ app.post("/chat/group", async (req, res) => {
         });
       }
 
-      // 고정 순서로 1인 1발언 정렬
       const pickedOnce = new Set();
       const ordered = [];
       let modLine = roundLines.find(l => l.speaker === "모더레이터");
@@ -661,7 +654,6 @@ app.post("/chat/group", async (req, res) => {
         if (found) { ordered.push(found); pickedOnce.add(sp); }
       }
 
-      // 전사 누적 + 다음 라운드 요약 업데이트
       ordered.forEach(l => transcript.push({ speaker: l.speaker, text: scrubAgingFacts(l.text) }));
       const brief = ordered
         .filter(l => l.speaker !== "모더레이터")
@@ -674,7 +666,6 @@ app.post("/chat/group", async (req, res) => {
       runningContext = brief;
     }
 
-    // 마지막에 인사이트만 별도로 요약 (3–6 불릿)
     const insightSys = `
   너는 모더레이터다. 아래 전사에서 팝업/오프라인 적용 아이디어를 3~6개 핵심 불릿으로만 출력한다.
   - 각 불릿은 What/Why/How를 1줄에 압축.
