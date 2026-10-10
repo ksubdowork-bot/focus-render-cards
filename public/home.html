@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BX Focus Group</title>
+  <meta name="description" content="BX AI Focus Group · BX Field Notes" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg-top:#EDE5DE;          /* bg-sand-top */
+      --bg-bottom:#EADCD7;       /* bg-peach-bottom */
+      --ink:#111111;
+      --ink-muted:#5C5C5C;
+      --hairline:#1111112E;
+      --accent:#C25E3D;          /* accent-coral */
+      --font:"Noto Sans KR","Apple SD Gothic Neo","Pretendard",sans-serif;
+      --margin:clamp(24px,4.4vw,64px);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%}
+    body{
+      min-height:100vh;
+      background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom));
+      background-attachment:fixed;
+      color:var(--ink);
+      font-family:var(--font);
+      -webkit-font-smoothing:antialiased;word-break:keep-all;
+      display:flex;flex-direction:column;
+    }
+    /* triple chapter lines */
+    .triple{position:fixed;top:0;bottom:0;left:8px;width:13px;
+      border-left:1px solid var(--ink);border-right:1px solid var(--ink);pointer-events:none}
+    .triple::after{content:"";position:absolute;top:0;bottom:0;left:5px;border-left:1px solid var(--ink)}
+    /* right running rail */
+    .rail{position:fixed;top:0;bottom:0;right:40px;border-left:1px solid var(--ink);pointer-events:none}
+    .rail span{position:absolute;left:8px;font-size:12px;letter-spacing:.02em;white-space:nowrap;
+      writing-mode:vertical-rl}
+    .rail .t{top:64px}.rail .b{bottom:64px}
+
+    main{flex:1;display:flex;flex-direction:column;
+      padding:var(--margin) calc(var(--margin) + 56px) var(--margin) calc(var(--margin) + 24px)}
+    .eyebrow{font-size:clamp(14px,1.4vw,20px);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    h1{margin-top:clamp(24px,4vw,56px);font-weight:300;letter-spacing:-.03em;line-height:.95;
+      font-size:clamp(52px,8.3vw,160px)}
+    .sub-ko{margin-top:clamp(12px,1.4vw,24px);margin-bottom:clamp(40px,6vw,96px);color:var(--ink-muted);font-size:clamp(17px,1.6vw,30px);line-height:1.4}
+
+    .options{margin-top:auto;
+      display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hairline)}
+    .opt{display:flex;flex-direction:column;gap:clamp(10px,1vw,16px);
+      padding:clamp(28px,3.3vw,48px) clamp(0px,2.5vw,48px) clamp(28px,3.3vw,48px) 0;
+      color:inherit;text-decoration:none;position:relative}
+    .opt + .opt{border-left:1px solid var(--hairline);padding-left:clamp(24px,2.5vw,48px)}
+    .num{font-size:clamp(40px,3.75vw,72px);font-weight:300;line-height:1;color:var(--accent)}
+    .opt h2{font-size:clamp(30px,3.3vw,64px);font-weight:400;letter-spacing:-.01em;line-height:1.1}
+    .opt p{color:var(--ink-muted);font-size:clamp(15px,1.1vw,21px);line-height:1.5;max-width:34em}
+    .go{margin-top:clamp(8px,1vw,16px);font-size:clamp(14px,1.05vw,20px);font-weight:700;letter-spacing:.06em;
+      text-transform:uppercase;display:inline-flex;align-items:center;gap:12px}
+    .go::after{content:"";width:40px;height:1px;background:var(--ink);transition:width .25s ease}
+    .opt:hover .go::after,.opt:focus-visible .go::after{width:88px}
+    .opt:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
+
+    footer{padding:0 calc(var(--margin) + 56px) var(--margin) calc(var(--margin) + 24px);
+      color:var(--ink-muted);font-size:clamp(12px,.95vw,18px);font-weight:300;line-height:1.4}
+    footer a{color:#417EAA}
+
+    @media (max-width:760px){
+      .rail{display:none}
+      main,footer{padding-right:var(--margin)}
+      .options{grid-template-columns:1fr}
+      .opt{padding-right:0}
+      .opt + .opt{border-left:0;border-top:1px solid var(--hairline);padding-left:0}
+    }
+    @media (prefers-reduced-motion:reduce){.go::after{transition:none}}
+  </style>
+</head>
+<body>
+  <div class="triple" aria-hidden="true"></div>
+  <div class="rail" aria-hidden="true"><span class="t">BX Focus Group</span><span class="b">Experience Design TF</span></div>
+
+  <main>
+    <div class="eyebrow">BX Focus Group</div>
+    <h1>Choose a workspace</h1>
+    <p class="sub-ko">사용할 도구를 선택하세요.</p>
+
+    <nav class="options" aria-label="workspaces">
+      <a class="opt" href="/personas">
+        <span class="num">01</span>
+        <h2>BX AI Focus Group</h2>
+        <p>AI 페르소나와 1:1 또는 그룹으로 대화하며 아이디어를 검증합니다.</p>
+        <span class="go">Open</span>
+      </a>
+      <a class="opt" href="/deep-research">
+        <span class="num">02</span>
+        <h2>BX Field Notes</h2>
+        <p>국내외 팝업·리테일 공간 사례를 날짜별로 모은 리서치 피드입니다.</p>
+        <span class="go">Open</span>
+      </a>
+    </nav>
+  </main>
+
+  <footer>Experience Design TF · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a></footer>
+</body>
+</html>

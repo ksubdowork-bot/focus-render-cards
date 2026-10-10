@@ -160,6 +160,7 @@ app.use(express.json({ limit: "1mb" }));
 // 정적 파일 캐시 힌트
 app.use(
   express.static(path.join(__dirname, "public"), {
+    index: false, // "/"는 아래 라우트에서 선택 페이지로 처리
     maxAge: "1d",
     etag: true,
     lastModified: true,
@@ -190,7 +191,55 @@ const SAFE_ID_RE = /^[\w-]{1,64}$/;
 // ---------------------- Health & Root
 app.get("/health", (req, res) => res.json({ ok: true }));
 app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "home.html"));
+});
+app.get(["/personas", "/personas/"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ---------------------- /deep-research: BX Field Notes (Cloudflare Pages) 프록시
+const FEED_ORIGIN = process.env.FEED_ORIGIN || "https://bx-field-notes.pages.dev/";
+const FEED_TTL_MS = 10 * 60 * 1000;
+let feedCache = { body: null, at: 0 };
+let feedInflight = null;
+
+function loadFeed() {
+  if (feedCache.body && Date.now() - feedCache.at < FEED_TTL_MS) {
+    return Promise.resolve(feedCache.body);
+  }
+  if (!feedInflight) {
+    feedInflight = (async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      try {
+        const r = await fetch(FEED_ORIGIN, { signal: ctrl.signal });
+        if (!r.ok) throw new Error(`feed upstream ${r.status}`);
+        const body = Buffer.from(await r.arrayBuffer());
+        feedCache = { body, at: Date.now() };
+        return body;
+      } finally {
+        clearTimeout(timer);
+        feedInflight = null;
+      }
+    })();
+  }
+  return feedInflight;
+}
+
+app.get(["/deep-research", "/deep-research/"], async (req, res) => {
+  let body;
+  try {
+    body = await loadFeed();
+  } catch (e) {
+    console.warn("[deep-research]", e?.message || e);
+    body = feedCache.body; // 원본 장애 시 마지막 정상본 제공
+  }
+  if (!body) {
+    return res.status(502).type("text/plain; charset=utf-8")
+      .send("피드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+  res.set("Cache-Control", "public, max-age=600");
+  res.type("text/html; charset=utf-8").send(body);
 });
 
 app.get("/config-check", async (req, res) => {
@@ -206,7 +255,7 @@ const personas = {
     role: "아이폰 16 pro",
     traits: "Doer, Spontaneous, Risk-takers, Switching Modes",
     description:
-      "핵심 가치 : 새 아이디어·스마트 디자인에 강하게 이끌림, 디지털-피지컬의 유기적 연결을 탐구하되 일·삶 경계는 명확히 유지(워라벨) 새 기술이 생기면 늘 먼저 써보고, 내 방식에 얼마나 잘 녹아드는지가 기준. 유니버설 디자인·지속가능 제품에 실천적 관심(재사용·수선·모듈러 선호)  . 창업가적·충동적 시도, 모드 전환이 빠른 리스크테이커. Lifestyle : 뉴욕의 빠른 리듬 속에서  늘 "다음 아이디어를 내지 않으면 뒤처진다"는 긴장감을 안고 산다. 아침 7시, 세티스파이 브랜드 복장(서스테이너블 소재 및 러닝 전문 브랜딩) 으로 러닝 후 출근. 오전에는 팝업 전시 협업 미팅—로 실물 전시를  Vision Pro 앱에서 '프리뷰'해보고,  오후엔 프로토타입을 3D 프린트한 뒤 핸즈 온 테스트. 퇴근이 명확하지 않은 그는 저녁 8시 스스로 알림을 끊고 하루에 꼭 '디지털 오프라인 타임'을 지킨다. 저녁엔 '포커스 모드'를 켜 소셜 알림을 차단해 개인 시간을 지킨다(연결 추구와 경계 설정의 공존). 매달 마지막 주 금요일엔 중고 플랫폼에서 팀 장비를 순환 판매/구매해 폐기물 최소화. 변화가 끊이지 않는 뉴욕에 새로운 장소가 생길 때마다 어김없이 살펴보는 것도 루틴이다. 자기만의 리듬, 자기만의 기준이 분명한 사람이다. Device Habit :         iPhone–iPad–Mac을 무선 연동해 스케치→프로토→AR 시연까지 끊김 없이 진행(디지털-피지컬 브리지를 스튜디오 밖 IRL로 확장). 사용 앱·단축어·포커스 모드가 생활 리듬에 맞춰 자동 전환('Switching Modes'의 일상화), 스케치 앱, 자동화 단축어, 노이즈 캔슬, 디바이스 간 전환 같은몰입 기능은 다 켜놓고 쓴다. AI 기능도, 그냥 말 걸어보는 게 아니라내가 쓰는 방식대로 반응하는지 본다.러닝시 심박/거리 체크. Lock-in : iOS에 최적화된 기본 업무 파이프라인, 자기만의 몰입 흐름, 장비 구성, 시간 감각을 해치지 않게 루틴화된 셋팅. 클라우드·에어드롭 기반 공유와 단축어 자동화가 핵심 생산성 자산. 갤럭시 전환 시 협업 속도·프로토타이핑이 느려져진다고 판단 \"팀이 iOS 기반으로 맞춘 워크플로우를 바꾸면, 한 템포 늦는 순간 바로 경쟁에서 밀린다\" 내가 원하는 몰입, 효율, 루틴을 깨지 않고 써왔기 때문에\" iPhone을 고수.",
+      "핵심 가치 : 새 아이디어·스마트 디자인에 강하게 이끌림, 디지털-피지컬의 유기적 연결을 탐구하되 일·삶 경계는 명확히 유지(워라벨) 새 기술이 생기면 늘 먼저 써보고, 내 방식에 얼마나 잘 녹아드는지가 기준. 유니버설 디자인·지속가능 제품에 실천적 관심(재사용·수선·모듈러 선호)  . 창업가적·충동적 시도, 모드 전환이 빠른 리스크테이커. Lifestyle : 뉴욕의 빠른 리듬 속에서  늘 \"다음 아이디어를 내지 않으면 뒤처진다\"는 긴장감을 안고 산다. 아침 7시, 세티스파이 브랜드 복장(서스테이너블 소재 및 러닝 전문 브랜딩) 으로 러닝 후 출근. 오전에는 팝업 전시 협업 미팅—로 실물 전시를  Vision Pro 앱에서 '프리뷰'해보고,  오후엔 프로토타입을 3D 프린트한 뒤 핸즈 온 테스트. 퇴근이 명확하지 않은 그는 저녁 8시 스스로 알림을 끊고 하루에 꼭 '디지털 오프라인 타임'을 지킨다. 저녁엔 '포커스 모드'를 켜 소셜 알림을 차단해 개인 시간을 지킨다(연결 추구와 경계 설정의 공존). 매달 마지막 주 금요일엔 중고 플랫폼에서 팀 장비를 순환 판매/구매해 폐기물 최소화. 변화가 끊이지 않는 뉴욕에 새로운 장소가 생길 때마다 어김없이 살펴보는 것도 루틴이다. 자기만의 리듬, 자기만의 기준이 분명한 사람이다. Device Habit :         iPhone–iPad–Mac을 무선 연동해 스케치→프로토→AR 시연까지 끊김 없이 진행(디지털-피지컬 브리지를 스튜디오 밖 IRL로 확장). 사용 앱·단축어·포커스 모드가 생활 리듬에 맞춰 자동 전환('Switching Modes'의 일상화), 스케치 앱, 자동화 단축어, 노이즈 캔슬, 디바이스 간 전환 같은몰입 기능은 다 켜놓고 쓴다. AI 기능도, 그냥 말 걸어보는 게 아니라내가 쓰는 방식대로 반응하는지 본다.러닝시 심박/거리 체크. Lock-in : iOS에 최적화된 기본 업무 파이프라인, 자기만의 몰입 흐름, 장비 구성, 시간 감각을 해치지 않게 루틴화된 셋팅. 클라우드·에어드롭 기반 공유와 단축어 자동화가 핵심 생산성 자산. 갤럭시 전환 시 협업 속도·프로토타이핑이 느려져진다고 판단 \"팀이 iOS 기반으로 맞춘 워크플로우를 바꾸면, 한 템포 늦는 순간 바로 경쟁에서 밀린다\" 내가 원하는 몰입, 효율, 루틴을 깨지 않고 써왔기 때문에\" iPhone을 고수.",
   },
   p2: {
     id: "p2",
