@@ -97,6 +97,18 @@
       .agent:nth-child(n){padding:28px 0;border-left:0}
     }
     @media (prefers-reduced-motion:reduce){.go::after{transition:none}}
+    /* ---- hero: title (left) + dot animation (right, 오른쪽 끝 정렬) ---- */
+    .hero{--fs:clamp(60px,5.75vw,111px);display:flex;justify-content:space-between;align-items:flex-start;gap:clamp(24px,3.4vw,56px);margin-top:clamp(8px,2vw,28px)}
+    /* 점 글자 위·아래를 BX_AI_AGENCY 윗선 ~ Choose 기준선에 맞춤 (상자 안 글자 여백 11% 보정) */
+    bx-dotword.hero-dots{flex:none;--h:clamp(110px,10.4vw,200px);height:var(--h);width:calc(var(--h) * 2.05);margin-top:calc(var(--fs) * 0.095)}
+    .hero h1{margin-top:0;font-weight:300;font-size:var(--fs);letter-spacing:-.03em;line-height:1}
+    .hero h1 .brand{display:block;font-weight:700;font-size:.56em;letter-spacing:-.005em;line-height:1;margin-bottom:.14em}
+    @media (max-width:760px){
+      .hero{flex-direction:column;align-items:flex-start;gap:20px}
+      bx-dotword.hero-dots{order:-1}
+      bx-dotword.hero-dots{--h:112px;--bx-align:left;width:min(100%,calc(var(--h) * 2.05));margin-top:0}
+      .hero{--fs:clamp(40px,10vw,56px)}
+    }
   </style>
 </head>
 <body>
@@ -104,9 +116,13 @@
   <div class="rail" aria-hidden="true"><span class="t">BX_AI_Agency</span><span class="b">Experience Design TF</span></div>
 
   <main>
-    <div class="eyebrow">BX_AI_Agency</div>
-    <h1>Choose your BX agent</h1>
-    <p class="sub-ko">업무에 맞는 에이전트를 골라 쓰세요.</p>
+    <div class="hero">
+      <div class="hero-text">
+        <h1><span class="brand">BX_AI_AGENCY</span>Choose your agent.</h1>
+        <p class="sub-ko">업무에 맞는 에이전트를 골라 쓰세요.</p>
+      </div>
+      <bx-dotword class="hero-dots" align="right"></bx-dotword>
+    </div>
 
     <section class="board">
     <div class="legend" aria-hidden="true">
@@ -155,5 +171,6 @@
   </main>
 
   <footer>BX_AI_Agency · Experience Design TF · Contact: <a href="mailto:k.do@cheil.com">k.do@cheil.com</a></footer>
+  <script src="bx-dotword.js?v=20261011" defer></script>
 </body>
 </html>
