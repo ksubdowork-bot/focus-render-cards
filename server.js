@@ -199,7 +199,7 @@ app.get(["/personas", "/personas/"], (req, res) => {
 
 // ---------------------- /deep-research: BX Field Notes (Cloudflare Pages) 프록시
 const FEED_ORIGIN = process.env.FEED_ORIGIN || "https://bx-field-notes.pages.dev/";
-const FEED_TTL_MS = 10 * 60 * 1000;
+const FEED_TTL_MS = 5 * 60 * 1000; // 5분마다 원본 재확인
 let feedCache = { body: null, at: 0 };
 let feedInflight = null;
 
@@ -238,7 +238,7 @@ app.get(["/deep-research", "/deep-research/"], async (req, res) => {
     return res.status(502).type("text/plain; charset=utf-8")
       .send("피드를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
   }
-  res.set("Cache-Control", "public, max-age=600");
+  res.set("Cache-Control", "public, max-age=300");
   res.type("text/html; charset=utf-8").send(body);
 });
 
